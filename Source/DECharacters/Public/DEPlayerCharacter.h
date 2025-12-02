@@ -12,7 +12,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
-UCLASS()
+UCLASS(Blueprintable)
 class DECHARACTERS_API ADEPlayerCharacter : public ADECharacterBase
 {
 	GENERATED_BODY()
@@ -51,7 +51,7 @@ private:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCamera;
-	
+
 #pragma region Input
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))

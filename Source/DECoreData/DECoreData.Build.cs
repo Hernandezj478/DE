@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class DECharacters : ModuleRules
+public class DECoreData : ModuleRules
 {
-    public DECharacters(ReadOnlyTargetRules Target) : base(Target)
+    public DECoreData(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -10,7 +10,6 @@ public class DECharacters : ModuleRules
             new string[]
             {
                 "Core",
-                "EnhancedInput",
             }
         );
 
@@ -19,7 +18,8 @@ public class DECharacters : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "DECoreData"
+                "Slate",
+                "SlateCore"
             }
         );
     }

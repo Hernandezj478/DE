@@ -16,6 +16,6 @@ public class DEEditorTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "DECharacters" });
+		ExtraModuleNames.AddRange(new string[] { "DECharacters", "DECoreData" });
 	}
 }

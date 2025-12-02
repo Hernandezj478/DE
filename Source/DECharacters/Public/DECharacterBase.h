@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "DECharacterBase.generated.h"
 
-UCLASS()
+UCLASS(Abstract, NotBlueprintable)
 class DECHARACTERS_API ADECharacterBase : public ACharacter
 {
 	GENERATED_BODY()
@@ -40,13 +40,13 @@ protected:
 private:
 #pragma region Movement
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	float SneakSpeed = 75.0f;
+	float SneakSpeed = 100.0f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	float WalkSpeed = 150.0f;
+	float WalkSpeed = 200.0f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	float SprintSpeed = 300.0f;
+	float SprintSpeed = 400.0f;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
 	bool bIsSprinting = false;
