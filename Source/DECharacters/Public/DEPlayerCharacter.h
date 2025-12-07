@@ -10,6 +10,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UAnimBlueprint;
 struct FInputActionValue;
 
 UCLASS(Blueprintable)
@@ -36,12 +37,14 @@ protected:
 	
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void PlayerJump();
+	void PlayerStartJump();
+	void PlayerEndJump();
 	void TogglePerspective();
 	void StartSprint();
 	void StopSprint();
 	void StartSneak();
 	void StopSneak();
+	
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -51,6 +54,22 @@ private:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FirstPersonCamera;
+	
+	// First Person camera offset
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	FVector FirstPersonCameraOffset = FVector(2.8f, 5.9f, 0.5f);
+	
+	// First person camera field of view
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	float FirstPersonFieldOfView = 70.0f;
+	
+	// First Person Camera view scale
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	float FirstPersonScale = 0.6f;
+	
+	// First Person mesh, visible only to the owning player
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	USkeletalMeshComponent* FirstPersonMeshComponent;
 
 #pragma region Input
 	

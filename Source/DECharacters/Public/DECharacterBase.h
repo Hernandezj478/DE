@@ -35,6 +35,7 @@ protected:
 	
 	void SetSprinting(const bool bSprinting);
 	void SetSneaking(const bool bSneaking);
+	
 #pragma endregion Movement
 	
 private:

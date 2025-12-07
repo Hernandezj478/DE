@@ -21,9 +21,9 @@ ADEPlayerCharacter::ADEPlayerCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.0f, 96.0f);
 	// Don't rotate when controller rotates. Affect only camera
-	bUseControllerRotationPitch = true;
+	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
-	bUseControllerRotationRoll = true;
+	bUseControllerRotationRoll = false;
 	
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
@@ -47,11 +47,32 @@ ADEPlayerCharacter::ADEPlayerCharacter()
 	ThirdPersonCamera->Deactivate();
 	ThirdPersonCamera->bAutoActivate = false;
 	
+	// Create 1st person mesh component
+	FirstPersonMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonMesh"));
+	check(FirstPersonMeshComponent != nullptr);
+	
+	// Configure mesh components
+	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
+	GetMesh()->SetOwnerNoSee(true);
+	FirstPersonMeshComponent->SetupAttachment(GetMesh());
+	FirstPersonMeshComponent->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::FirstPerson;
+	FirstPersonMeshComponent->SetOnlyOwnerSee(true);
+	FirstPersonMeshComponent->SetCollisionProfileName(FName("NoCollision"));
+	
 	// Create 1st person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCamera->SetupAttachment(GetMesh(), "head");
-	FirstPersonCamera->SetRelativeRotation(FRotator(0.0, 90.0, 90.0));
+	FirstPersonCamera->SetupAttachment(FirstPersonMeshComponent, FName("head"));
+	
+	FirstPersonCamera->SetRelativeLocationAndRotation(FirstPersonCameraOffset, FRotator(0.0f, 90.0f, -90.0f));
 	FirstPersonCamera->bUsePawnControlRotation = true;
+	
+	// Enable first-person rendering on the camera and set default FOV and scale values
+	FirstPersonCamera->bEnableFirstPersonFieldOfView = true;
+	FirstPersonCamera->bEnableFirstPersonScale = true;
+	FirstPersonCamera->FirstPersonFieldOfView = FirstPersonFieldOfView;
+	FirstPersonCamera->FirstPersonScale = FirstPersonScale;
+	
+	// Enable first-person camera by default
 	FirstPersonCamera->Activate();
 }
 
@@ -59,7 +80,14 @@ ADEPlayerCharacter::ADEPlayerCharacter()
 void ADEPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	// Get the player controller for this character
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
 }
 
 void ADEPlayerCharacter::Move(const FInputActionValue& Value)
@@ -86,12 +114,17 @@ void ADEPlayerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void ADEPlayerCharacter::PlayerJump()
+void ADEPlayerCharacter::PlayerStartJump()
 {
 	if (ADECharacterBase::CanCharacterJump() && !GetMovementComponent()->IsFalling())
 	{
 		ADECharacterBase::HasJumped();
 	}
+}
+
+void ADEPlayerCharacter::PlayerEndJump()
+{
+	StopJumping();
 }
 
 void ADEPlayerCharacter::TogglePerspective()
@@ -104,13 +137,19 @@ void ADEPlayerCharacter::TogglePerspective()
 		bUseControllerRotationPitch = false;
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationRoll = false;
+		GetMesh()->SetOwnerNoSee(false);
+		GetMesh()->SetCollisionProfileName(FName("Collision"));
+		FirstPersonMeshComponent->SetOnlyOwnerSee(false);
 		return;
 	}
 	ThirdPersonCamera->Deactivate();
 	FirstPersonCamera->Activate();
-	bUseControllerRotationPitch = true;
+	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
-	bUseControllerRotationRoll = true;
+	bUseControllerRotationRoll = false;
+	GetMesh()->SetOwnerNoSee(true);
+	GetMesh()->SetCollisionProfileName(FName("NoCollision"));
+	FirstPersonMeshComponent->SetOnlyOwnerSee(true);
 	return;
 }
 
@@ -134,26 +173,21 @@ void ADEPlayerCharacter::StopSneak()
 	ADECharacterBase::SetSneaking(false);
 }
 
+
 // Called every frame
 void ADEPlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
 }
 
 // Called to bind functionality to input
 void ADEPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-	}
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::PlayerJump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::PlayerStartJump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::PlayerEndJump);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ADEPlayerCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ADEPlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(ToggleCameraPerspective, ETriggerEvent::Completed, this, &ADEPlayerCharacter::TogglePerspective);
