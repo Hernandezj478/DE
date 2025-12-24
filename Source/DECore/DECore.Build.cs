@@ -18,7 +18,8 @@ public class DECore : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "DECore"
+                "Slate",
+                "SlateCore"
             }
         );
     }
