@@ -16,6 +16,6 @@ public class DETarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "DECharacters", "DECoreData", "DECore", "DECoreSystems" });
+		ExtraModuleNames.AddRange(new string[] { "DECharacters", "DECoreData", "DECore", "DECoreSystems", "DESurvival" });
 	}
 }
