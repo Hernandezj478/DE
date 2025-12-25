@@ -17,8 +17,6 @@ ADECharacterBase::ADECharacterBase()
 	bAlwaysRelevant = true;
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetMesh()->SetIsReplicated(true);
-	
-	StatComponent = CreateDefaultSubobject<UDEStatComponent>(TEXT("StatComponent"));
 }
 
 // Called when the game starts or when spawned

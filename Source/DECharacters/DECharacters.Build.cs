@@ -19,8 +19,7 @@ public class DECharacters : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "DECoreData",
-                "DECore"
+                "DECoreData"
             }
         );
     }

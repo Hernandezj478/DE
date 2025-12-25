@@ -3,7 +3,6 @@
 
 #include "DEPlayerCharacter.h"
 
-#include "DELogger.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
@@ -119,15 +118,7 @@ void ADEPlayerCharacter::PlayerStartJump()
 {
 	if (ADECharacterBase::CanCharacterJump() && !GetMovementComponent()->IsFalling())
 	{
-		if (StatComponent && StatComponent->GetStamina() >= 15.0f)
-		{
-			StatComponent->ConsumeStamina(15.0f);
-			ADECharacterBase::HasJumped();
-		}
-		else
-		{
-			UE_LOG(LogDECharacters, Warning, TEXT("Not enough stamina to jump"));
-		}
+		ADECharacterBase::HasJumped();
 	}
 }
 
@@ -165,10 +156,6 @@ void ADEPlayerCharacter::TogglePerspective()
 void ADEPlayerCharacter::StartSprint()
 {
 	ADECharacterBase::SetSprinting(true);
-	if (StatComponent)
-	{
-		StatComponent->ConsumeStamina(10.f);
-	}
 }
 
 void ADEPlayerCharacter::StopSprint()
