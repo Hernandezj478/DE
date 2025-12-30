@@ -3,6 +3,8 @@
 
 #include "DECharacterBase.h"
 
+#include "DEEventBus.h"
+#include "DEStatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 
@@ -17,22 +19,36 @@ ADECharacterBase::ADECharacterBase()
 	bAlwaysRelevant = true;
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetMesh()->SetIsReplicated(true);
+	Statline = CreateDefaultSubobject<UDEStatComponent>(TEXT("Statline"));
+	Statline->SetMovementComponentReference(GetCharacterMovement());
+	
 }
 
 // Called when the game starts or when spawned
 void ADECharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	// TODO: Move event listener to Movement Extension system later when implemented
+	if (UDEEventBus* Bus = UDEEventBus::Get())
+	{
+		Bus->OnExhaustionStart.AddUObject(this, &ADECharacterBase::HandleExhaustedStart);
+		Bus->OnExhaustionEnd.AddUObject(this, &ADECharacterBase::HandleExhaustedEnd);
+	}
 }
 
 bool ADECharacterBase::CanCharacterJump() const
 {
-	return CanJump();
+	return Statline->CanJump();
+}
+
+bool ADECharacterBase::CanSprint() const
+{
+	return Statline->CanSprint();
 }
 
 void ADECharacterBase::HasJumped()
 {
+	Statline->HasJumped();
 	ACharacter::Jump();
 }
 
@@ -51,40 +67,44 @@ float ADECharacterBase::GetSprintSpeed() const
 	return SprintSpeed;
 }
 
-void ADECharacterBase::SetSprinting(const bool bSprinting)
+void ADECharacterBase::SetSprinting(const bool& bSprinting)
 {
-	if (bSprinting)
-	{
-		bIsSneaking = false;
-		GetCharacterMovement()->MaxWalkSpeed = GetSprintSpeed();
-		bIsSprinting = true;
-		return;
-	}
-	if (bIsSneaking)
-	{
-		return;
-	}
-	bIsSprinting = false;
-	GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
-	return;
+	Statline->SetSprinting(bSprinting);
 }
 
-void ADECharacterBase::SetSneaking(const bool bSneaking)
+void ADECharacterBase::SetSneaking(const bool& bSneaking)
 {
-	if (bSneaking)
-	{
-		bIsSprinting = false;
-		GetCharacterMovement()->MaxWalkSpeed = GetSneakSpeed();
-		bIsSneaking = true;
-		return;
-	}
-	if (bIsSprinting)
+	Statline->SetSneaking(bSneaking);
+}
+
+void ADECharacterBase::HandleExhaustedStart(AActor* Actor)
+{
+	if (Actor != this)
 	{
 		return;
 	}
-	bIsSneaking = false;
-	GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
-	return;
+	bCanSprint = false;
+	bCanJump = false;
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, 
+			TEXT("Exhausted State Started"));
+	}
+}
+
+void ADECharacterBase::HandleExhaustedEnd(AActor* Actor)
+{
+	if (Actor != this)
+	{
+		return;
+	}
+	bCanSprint = true;
+	bCanJump = true;
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
+			TEXT("Exhausted State Ended"));
+	}
 }
 
 // Called every frame

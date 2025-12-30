@@ -19,7 +19,9 @@ public class DECharacters : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "DECoreData"
+                "DECoreData",
+                "DEGameplay", 
+                "DECoreSystems"
             }
         );
     }

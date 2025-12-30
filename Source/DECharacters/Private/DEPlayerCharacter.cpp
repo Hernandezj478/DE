@@ -116,6 +116,10 @@ void ADEPlayerCharacter::Look(const FInputActionValue& Value)
 
 void ADEPlayerCharacter::PlayerStartJump()
 {
+	if (!bCanSprint)
+	{
+		return;
+	}
 	if (ADECharacterBase::CanCharacterJump() && !GetMovementComponent()->IsFalling())
 	{
 		ADECharacterBase::HasJumped();
@@ -155,24 +159,27 @@ void ADEPlayerCharacter::TogglePerspective()
 
 void ADEPlayerCharacter::StartSprint()
 {
-	ADECharacterBase::SetSprinting(true);
+	if (!bCanSprint)
+	{
+		return;
+	}
+	SetSprinting(true);
 }
 
 void ADEPlayerCharacter::StopSprint()
 {
-	ADECharacterBase::SetSprinting(false);
+	SetSprinting(false);
 }
 
 void ADEPlayerCharacter::StartSneak()
 {
-	ADECharacterBase::SetSneaking(true);
+	SetSneaking(true);
 }
 
 void ADEPlayerCharacter::StopSneak()
 {
-	ADECharacterBase::SetSneaking(false);
+	SetSneaking(false);
 }
-
 
 // Called every frame
 void ADEPlayerCharacter::Tick(float DeltaTime)

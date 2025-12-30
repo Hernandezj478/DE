@@ -30,7 +30,7 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DESurvival",
+			"Name": "DEGameplay",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}

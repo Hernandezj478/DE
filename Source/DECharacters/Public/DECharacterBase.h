@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "DECharacterBase.generated.h"
 
+class UDEStatComponent;
+
 UCLASS(Abstract, NotBlueprintable)
 class DECHARACTERS_API ADECharacterBase : public ACharacter
 {
@@ -24,17 +26,21 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+
 #pragma region Movement
+	bool bCanJump = true;
+	bool bCanSprint = true;
+	
 	bool CanCharacterJump() const;
+	bool CanSprint() const;
 	void HasJumped();
 	
 	float GetSneakSpeed() const;
 	float GetWalkSpeed() const;
 	float GetSprintSpeed() const;
 	
-	void SetSprinting(const bool bSprinting);
-	void SetSneaking(const bool bSneaking);
+	void SetSprinting(const bool& bSprinting);
+	void SetSneaking(const bool& bSneaking);
 	
 #pragma endregion Movement
 	
@@ -55,6 +61,11 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
 	bool bIsSneaking = false;
 #pragma endregion Movement
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
+	UDEStatComponent* Statline;
 	
-	
+	// TODO: Remove when character movement extension system is implemented
+	void HandleExhaustedStart(AActor* Actor);
+	void HandleExhaustedEnd(AActor* Actor);
 };

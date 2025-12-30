@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class DESurvival : ModuleRules
+public class DEGameplay : ModuleRules
 {
-    public DESurvival(ReadOnlyTargetRules Target) : base(Target)
+    public DEGameplay(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -10,6 +10,7 @@ public class DESurvival : ModuleRules
             new string[]
             {
                 "Core",
+                "DECoreData",
             }
         );
 
@@ -19,8 +20,8 @@ public class DESurvival : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore",
-                "DECore"
+                "SlateCore", 
+                "DECoreSystems"
             }
         );
     }
