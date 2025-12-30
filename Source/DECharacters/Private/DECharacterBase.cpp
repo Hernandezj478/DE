@@ -2,7 +2,7 @@
 
 
 #include "DECharacterBase.h"
-
+#include "Components/DEMovementStateComponent.h"
 #include "DEEventBus.h"
 #include "DEStatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -21,19 +21,13 @@ ADECharacterBase::ADECharacterBase()
 	GetMesh()->SetIsReplicated(true);
 	Statline = CreateDefaultSubobject<UDEStatComponent>(TEXT("Statline"));
 	Statline->SetMovementComponentReference(GetCharacterMovement());
-	
+	MovementStateComponent = CreateDefaultSubobject<UDEMovementStateComponent>(TEXT("MovementStateComponent"));
 }
 
 // Called when the game starts or when spawned
 void ADECharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	// TODO: Move event listener to Movement Extension system later when implemented
-	if (UDEEventBus* Bus = UDEEventBus::Get())
-	{
-		Bus->OnExhaustionStart.AddUObject(this, &ADECharacterBase::HandleExhaustedStart);
-		Bus->OnExhaustionEnd.AddUObject(this, &ADECharacterBase::HandleExhaustedEnd);
-	}
 }
 
 bool ADECharacterBase::CanCharacterJump() const
@@ -75,36 +69,6 @@ void ADECharacterBase::SetSprinting(const bool& bSprinting)
 void ADECharacterBase::SetSneaking(const bool& bSneaking)
 {
 	Statline->SetSneaking(bSneaking);
-}
-
-void ADECharacterBase::HandleExhaustedStart(AActor* Actor)
-{
-	if (Actor != this)
-	{
-		return;
-	}
-	bCanSprint = false;
-	bCanJump = false;
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, 
-			TEXT("Exhausted State Started"));
-	}
-}
-
-void ADECharacterBase::HandleExhaustedEnd(AActor* Actor)
-{
-	if (Actor != this)
-	{
-		return;
-	}
-	bCanSprint = true;
-	bCanJump = true;
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
-			TEXT("Exhausted State Ended"));
-	}
 }
 
 // Called every frame

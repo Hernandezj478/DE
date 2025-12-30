@@ -10,7 +10,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-
+#include "Components/DEMovementStateComponent.h"
 
 // Sets default values
 ADEPlayerCharacter::ADEPlayerCharacter()
@@ -116,7 +116,7 @@ void ADEPlayerCharacter::Look(const FInputActionValue& Value)
 
 void ADEPlayerCharacter::PlayerStartJump()
 {
-	if (!bCanSprint)
+	if (!MovementStateComponent || !MovementStateComponent->CanJump())
 	{
 		return;
 	}
@@ -159,7 +159,7 @@ void ADEPlayerCharacter::TogglePerspective()
 
 void ADEPlayerCharacter::StartSprint()
 {
-	if (!bCanSprint)
+	if (!MovementStateComponent || !MovementStateComponent->CanSprint())
 	{
 		return;
 	}
