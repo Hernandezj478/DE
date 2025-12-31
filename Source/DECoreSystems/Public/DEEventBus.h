@@ -11,8 +11,14 @@
  */
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnExhaustionStart, AActor*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnExhaustionEnd, AActor*);
-
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnStarvationStart, AActor*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnStarvationEnd, AActor*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnDehydrationStart, AActor*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnDehydrationEnd, AActor*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*);
+
+
+
 UCLASS()
 class DECORESYSTEMS_API UDEEventBus : public UEngineSubsystem
 {
@@ -23,7 +29,10 @@ public:
 	//------------------------
 	FOnExhaustionStart OnExhaustionStart;
 	FOnExhaustionEnd OnExhaustionEnd;
-	
+	FOnStarvationStart OnStarvationStart;
+	FOnStarvationEnd OnStarvationEnd;
+	FOnDehydrationStart OnDehydrationStart;
+	FOnDehydrationEnd OnDehydrationEnd;
 	FOnDeath FOnDeath;
 	
 	// Global accessor

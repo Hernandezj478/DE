@@ -43,6 +43,11 @@ public:
 	{
 		return CurrentValue;
 	}
+	float GetMaxValue() const
+	{
+		return MaxValue;
+	}
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	float CurrentValue = 100;

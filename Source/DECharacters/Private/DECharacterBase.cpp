@@ -3,7 +3,6 @@
 
 #include "DECharacterBase.h"
 #include "Components/DEMovementStateComponent.h"
-#include "DEEventBus.h"
 #include "DEStatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 

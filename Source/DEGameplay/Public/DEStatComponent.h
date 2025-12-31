@@ -8,6 +8,8 @@
 #include "FDEStat.h"
 #include "DEStatComponent.generated.h"
 
+class UCharacterMovementComponent;
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class DEGAMEPLAY_API UDEStatComponent : public UActorComponent
 {
@@ -53,23 +55,29 @@ protected:
 private:
 	class UCharacterMovementComponent* OwningCharacterMovementComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats|Needs", meta = (AllowPrivateAccess = true))
+#pragma region Stats
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats", meta = (AllowPrivateAccess = true))
 	FDEStat Health;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats|Needs", meta = (AllowPrivateAccess = true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats", meta = (AllowPrivateAccess = true))
 	FDEStat Stamina;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats", meta = (AllowPrivateAccess = true))
+	FDEStat Blood = FDEStat(5000, 5000, .1);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats|Needs", meta = (AllowPrivateAccess = true))
 	FDEStat Satiation = FDEStat(100, 100, -0.125);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats|Needs", meta = (AllowPrivateAccess = true))
 	FDEStat Hydration = FDEStat(100, 100, -0.25);
+#pragma endregion
 	
 	void TickStats(const float& DeltaTime);
 	void TickStamina(const float& DeltaTime);
 	void TickSatiation(const float& DeltaTime);
 	void TickHydration(const float& DeltaTime);
 	void TickHealth(const float& DeltaTime);
+	void TickBlood(const float& DeltaTime);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
 	bool bIsSprinting = false;
@@ -104,4 +112,13 @@ private:
 	bool bIsExhausted = false;
 	
 	bool IsValidSprinting();
+	
+	void HandleStarvationStart(AActor* Actor);
+	void HandleStarvationEnd(AActor* Actor);
+	void HandleDehydrationStart(AActor* Actor);
+	void HandleDehydrationEnd(AActor* Actor);
+	
+	
+	bool bIsStarving = false;
+	bool bIsDehydrated = false;
 };
