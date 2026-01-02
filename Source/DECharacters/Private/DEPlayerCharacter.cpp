@@ -29,7 +29,7 @@ ADEPlayerCharacter::ADEPlayerCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 	GetCharacterMovement()->JumpZVelocity = 700.0f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.0f;
+	GetCharacterMovement()->MaxWalkSpeed = MovementStateComponent->GetWalkSpeed();
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -114,19 +114,15 @@ void ADEPlayerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void ADEPlayerCharacter::PlayerStartJump()
+void ADEPlayerCharacter::PlayerJumpStart()
 {
-	if (!MovementStateComponent || !MovementStateComponent->CanJump())
+	if (CanCharacterJump() && !GetMovementComponent()->IsFalling())
 	{
-		return;
-	}
-	if (ADECharacterBase::CanCharacterJump() && !GetMovementComponent()->IsFalling())
-	{
-		ADECharacterBase::HasJumped();
+		CharacterJump();
 	}
 }
 
-void ADEPlayerCharacter::PlayerEndJump()
+void ADEPlayerCharacter::PlayerJumpEnd()
 {
 	StopJumping();
 }
@@ -157,28 +153,28 @@ void ADEPlayerCharacter::TogglePerspective()
 	return;
 }
 
-void ADEPlayerCharacter::StartSprint()
+void ADEPlayerCharacter::SprintStart()
 {
-	if (!MovementStateComponent || !MovementStateComponent->CanSprint())
+	if (!MovementStateComponent)
 	{
 		return;
 	}
 	SetSprinting(true);
 }
 
-void ADEPlayerCharacter::StopSprint()
+void ADEPlayerCharacter::SprintEnd()
 {
 	SetSprinting(false);
 }
 
-void ADEPlayerCharacter::StartSneak()
+void ADEPlayerCharacter::CrouchStart()
 {
-	SetSneaking(true);
+	SetCrouch(true);
 }
 
-void ADEPlayerCharacter::StopSneak()
+void ADEPlayerCharacter::CrouchEnd()
 {
-	SetSneaking(false);
+	SetCrouch(false);
 }
 
 // Called every frame
@@ -193,15 +189,15 @@ void ADEPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::PlayerStartJump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::PlayerEndJump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::PlayerJumpStart);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::PlayerJumpEnd);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ADEPlayerCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ADEPlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(ToggleCameraPerspective, ETriggerEvent::Completed, this, &ADEPlayerCharacter::TogglePerspective);
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::StartSprint);
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::StopSprint);
-		EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::StartSneak);
-		EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::StopSneak);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::SprintStart);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::SprintEnd);
+		EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Started, this, &ADEPlayerCharacter::CrouchStart);
+		EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::CrouchEnd);
 
 		// EnhancedInputComponent->BindAction(InteractionAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::Interaction);
 		// EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Completed, this, &ADEPlayerCharacter::Inventory);

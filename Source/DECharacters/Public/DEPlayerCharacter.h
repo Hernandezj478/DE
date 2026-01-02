@@ -37,13 +37,13 @@ protected:
 	
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void PlayerStartJump();
-	void PlayerEndJump();
+	void PlayerJumpStart();
+	void PlayerJumpEnd();
 	void TogglePerspective();
-	void StartSprint();
-	void StopSprint();
-	void StartSneak();
-	void StopSneak();
+	void SprintStart();
+	void SprintEnd();
+	void CrouchStart();
+	void CrouchEnd();
 	
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))

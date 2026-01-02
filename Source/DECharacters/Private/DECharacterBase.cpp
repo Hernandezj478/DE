@@ -19,7 +19,6 @@ ADECharacterBase::ADECharacterBase()
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetMesh()->SetIsReplicated(true);
 	Statline = CreateDefaultSubobject<UDEStatComponent>(TEXT("Statline"));
-	Statline->SetMovementComponentReference(GetCharacterMovement());
 	MovementStateComponent = CreateDefaultSubobject<UDEMovementStateComponent>(TEXT("MovementStateComponent"));
 }
 
@@ -34,40 +33,20 @@ bool ADECharacterBase::CanCharacterJump() const
 	return Statline->CanJump();
 }
 
-bool ADECharacterBase::CanSprint() const
+void ADECharacterBase::CharacterJump()
 {
-	return Statline->CanSprint();
-}
-
-void ADECharacterBase::HasJumped()
-{
-	Statline->HasJumped();
-	ACharacter::Jump();
-}
-
-float ADECharacterBase::GetSneakSpeed() const
-{
-	return SneakSpeed;
-}
-
-float ADECharacterBase::GetWalkSpeed() const
-{
-	return WalkSpeed;
-}
-
-float ADECharacterBase::GetSprintSpeed() const
-{
-	return SprintSpeed;
+	Statline->ConsumeJumpStamina();
+	Jump();
 }
 
 void ADECharacterBase::SetSprinting(const bool& bSprinting)
 {
-	Statline->SetSprinting(bSprinting);
+	MovementStateComponent->RequestSprint(bSprinting);
 }
 
-void ADECharacterBase::SetSneaking(const bool& bSneaking)
+void ADECharacterBase::SetCrouch(const bool& bCrouch)
 {
-	Statline->SetSneaking(bSneaking);
+	MovementStateComponent->RequestCrouch(bCrouch);
 }
 
 // Called every frame

@@ -24,25 +24,13 @@ public:
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 	
 	UFUNCTION(BlueprintCallable)
-	void SetMovementComponentReference(UCharacterMovementComponent* Comp);
-	
-	UFUNCTION(BlueprintCallable)
-	void SetSneaking(const bool& IsSneaking);
-	
-	UFUNCTION(BlueprintCallable)
 	float GetStatPercentile(const EDEStatType Stat) const;
-	
-	UFUNCTION(BlueprintCallable)
-	bool CanSprint() const;
-	
-	UFUNCTION(BlueprintCallable)
-	void SetSprinting(const bool& IsSprinting);
 	
 	UFUNCTION(BlueprintCallable)
 	bool CanJump();
 	
 	UFUNCTION(BlueprintCallable)
-	void HasJumped();
+	void ConsumeJumpStamina();
 	
 	UFUNCTION(BlueprintCallable)
 	void AdjustStat(const EDEStatType Stat, const float& Amount);
@@ -53,7 +41,6 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	class UCharacterMovementComponent* OwningCharacterMovementComponent;
 	
 #pragma region Stats
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats", meta = (AllowPrivateAccess = true))
@@ -63,7 +50,7 @@ private:
 	FDEStat Stamina;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats", meta = (AllowPrivateAccess = true))
-	FDEStat Blood = FDEStat(5000, 5000, .1);
+	FDEStat Blood;	// Might want to change to be ~5000 mL of blood (realistic levels)
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Stats|Needs", meta = (AllowPrivateAccess = true))
 	FDEStat Satiation = FDEStat(100, 100, -0.125);
@@ -83,19 +70,10 @@ private:
 	bool bIsSprinting = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
-	bool bIsSneaking = false;
+	bool bIsCrouching = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
 	float SprintCostMultiplier = 2;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
-	float WalkSpeed = 125;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
-	float SprintSpeed = 450;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
-	float SneakSpeed = 75;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Statline|Movement", meta = (AllowPrivateAccess = true))
 	float JumpCost = 10;
@@ -111,14 +89,24 @@ private:
 	
 	bool bIsExhausted = false;
 	
-	bool IsValidSprinting();
-	
 	void HandleStarvationStart(AActor* Actor);
 	void HandleStarvationEnd(AActor* Actor);
 	void HandleDehydrationStart(AActor* Actor);
 	void HandleDehydrationEnd(AActor* Actor);
+	void HandleLowBloodStart(AActor* Actor);
+	void HandleLowBloodEnd(AActor* Actor);
+	
+	void HandleSprintStart(AActor* Actor);
+	void HandleSprintEnd(AActor* Actor);
+	void HandleCrouchStart(AActor* Actor);
+	void HandleCrouchEnd(AActor* Actor);
+	void HandleFallingStart(AActor* Actor);
+	void HandleFallingEnd(AActor* Actor);
 	
 	
 	bool bIsStarving = false;
 	bool bIsDehydrated = false;
+	bool bHasLowBlood = false;
+	
+	bool bIsFalling = false;
 };

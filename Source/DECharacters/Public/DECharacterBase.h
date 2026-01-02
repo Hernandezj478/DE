@@ -30,40 +30,17 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
 	UDEMovementStateComponent* MovementStateComponent;
-	
+
 #pragma region Movement
 	bool CanCharacterJump() const;
-	bool CanSprint() const;
-	void HasJumped();
-	
-	float GetSneakSpeed() const;
-	float GetWalkSpeed() const;
-	float GetSprintSpeed() const;
+	void CharacterJump();
 	
 	void SetSprinting(const bool& bSprinting);
-	void SetSneaking(const bool& bSneaking);
+	void SetCrouch(const bool& bCrouch);
 	
 #pragma endregion Movement
 	
 private:
-#pragma region Movement
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	float SneakSpeed = 100.0f;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	float WalkSpeed = 200.0f;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	float SprintSpeed = 400.0f;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	bool bIsSprinting = false;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
-	bool bIsSneaking = false;
-	
-#pragma endregion Movement
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	UDEStatComponent* Statline;
 };

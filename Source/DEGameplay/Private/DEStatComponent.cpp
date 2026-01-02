@@ -5,11 +5,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 
 
-// Sets default values for this component's properties
 UDEStatComponent::UDEStatComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
@@ -18,13 +15,20 @@ UDEStatComponent::UDEStatComponent()
 void UDEStatComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	OwningCharacterMovementComponent->MaxWalkSpeed = WalkSpeed;
+	
+	// Subscribe to delegates
 	if (UDEEventBus* Bus = UDEEventBus::Get())
 	{
 		Bus->OnStarvationStart.AddUObject(this, &UDEStatComponent::HandleStarvationStart);
 		Bus->OnStarvationEnd.AddUObject(this, &UDEStatComponent::HandleStarvationEnd);
 		Bus->OnDehydrationStart.AddUObject(this, &UDEStatComponent::HandleDehydrationStart);
 		Bus->OnDehydrationEnd.AddUObject(this, &UDEStatComponent::HandleDehydrationEnd);
+		Bus->OnLowBloodStart.AddUObject(this, &UDEStatComponent::HandleLowBloodStart);
+		Bus->OnLowBloodEnd.AddUObject(this, &UDEStatComponent::HandleLowBloodEnd);
+		Bus->OnSprintStart.AddUObject(this, &UDEStatComponent::HandleSprintStart);
+		Bus->OnSprintEnd.AddUObject(this, &UDEStatComponent::HandleSprintEnd);
+		Bus->OnFallingStart.AddUObject(this, &UDEStatComponent::HandleFallingStart);
+		Bus->OnFallingEnd.AddUObject(this, &UDEStatComponent::HandleFallingEnd);
 	}
 }
 
@@ -34,11 +38,11 @@ void UDEStatComponent::TickStats(const float& DeltaTime)
 	TickHealth(DeltaTime);
 	TickSatiation(DeltaTime);
 	TickHydration(DeltaTime);
+	TickBlood(DeltaTime);
 }
 
 void UDEStatComponent::TickStamina(const float& DeltaTime)
 {
-	// Note: this is continuously firing. need to investigate and fix logic issue.
 	// If dehydrated or starving, drain stamina
 	if (bIsStarving || bIsDehydrated)
 	{
@@ -54,11 +58,13 @@ void UDEStatComponent::TickStamina(const float& DeltaTime)
 		}
 		return;
 	}
-	// If exhuasted, tick timer down and set exhausted state
+	if (bIsFalling)
+	{
+		return;
+	}
+	// If exhausted, tick timer down and set exhausted state
 	if (CurrentStaminaExhaustion > 0.0)
 	{
-		CurrentStaminaExhaustion -= DeltaTime;
-		
 		// Still exhausted
 		if (!bIsExhausted)
 		{
@@ -69,23 +75,21 @@ void UDEStatComponent::TickStamina(const float& DeltaTime)
 			}
 		}
 		
+		CurrentStaminaExhaustion -= DeltaTime;
 		return;
 	}
 	// Sprint drain
-	if (bIsSprinting && IsValidSprinting())
+	if (bIsSprinting)
 	{
 		Stamina.Adjust(0 - abs((DeltaTime * SprintCostMultiplier)));
 		if (Stamina.GetCurrentValue() <= 0.0)
 		{
-			SetSprinting(false);
 			CurrentStaminaExhaustion = SecondsForStaminaExhaustion;
 		}
 		return;
 	}
-	Stamina.TickStat(DeltaTime);
-	
 	// Recovery transition
-	if (bIsExhausted && Stamina.GetCurrentValue() > 0.f)
+	if (bIsExhausted && Stamina.GetCurrentValue() > 10.f)
 	{
 		bIsExhausted = false;
 		if (const UDEEventBus* Bus = UDEEventBus::Get())
@@ -93,6 +97,7 @@ void UDEStatComponent::TickStamina(const float& DeltaTime)
 			Bus->OnExhaustionEnd.Broadcast(GetOwner());
 		}
 	}
+	Stamina.TickStat(DeltaTime);
 }
 
 void UDEStatComponent::TickSatiation(const float& DeltaTime)
@@ -137,6 +142,11 @@ void UDEStatComponent::TickHydration(const float& DeltaTime)
 
 void UDEStatComponent::TickHealth(const float& DeltaTime)
 {
+	if (bHasLowBlood)
+	{
+		Health.Adjust(-5.f * DeltaTime);
+		return;
+	}
 	if (bIsStarving || bIsDehydrated)
 	{
 		const float DrainRate = bIsStarving && bIsDehydrated ? 1.5f : 3.0f;
@@ -145,27 +155,30 @@ void UDEStatComponent::TickHealth(const float& DeltaTime)
 		return;
 	}
 	
-	if (Blood.Percentile() <= 0.3f)
-	{
-		return;
-	}
-	
 	Health.TickStat(DeltaTime);
 }
 
 void UDEStatComponent::TickBlood(const float& DeltaTime)
 {
-	// TODO: when bleeding affect active, drain blood
 	if (bIsStarving || bIsDehydrated)
 	{
 		return;
 	}
+	if (!bHasLowBlood && Blood.GetCurrentValue() <= 40.f)
+	{
+		if (const UDEEventBus* Bus = UDEEventBus::Get())
+		{
+			Bus->OnLowBloodStart.Broadcast(GetOwner());
+		}
+	}
+	else if (bHasLowBlood && Blood.GetCurrentValue() > 40.f)
+	{
+		if (const UDEEventBus* Bus = UDEEventBus::Get())
+		{
+			Bus->OnLowBloodEnd.Broadcast(GetOwner());
+		}
+	}
 	Blood.TickStat(DeltaTime);
-}
-
-bool UDEStatComponent::IsValidSprinting()
-{
-	return OwningCharacterMovementComponent->Velocity.Length() > WalkSpeed && !OwningCharacterMovementComponent->IsFalling();
 }
 
 void UDEStatComponent::HandleStarvationStart(AActor* Actor)
@@ -175,10 +188,6 @@ void UDEStatComponent::HandleStarvationStart(AActor* Actor)
 		return;
 	}
 	bIsStarving = true;
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Starvation Start"));
-	}
 }
 
 void UDEStatComponent::HandleStarvationEnd(AActor* Actor)
@@ -188,10 +197,6 @@ void UDEStatComponent::HandleStarvationEnd(AActor* Actor)
 		return;
 	}
 	bIsStarving = false;
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Starvation End"));
-	}
 }
 
 void UDEStatComponent::HandleDehydrationStart(AActor* Actor)
@@ -201,10 +206,6 @@ void UDEStatComponent::HandleDehydrationStart(AActor* Actor)
 		return;
 	}
 	bIsDehydrated = true;
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Dehydration Start"));
-	}
 }
 
 void UDEStatComponent::HandleDehydrationEnd(AActor* Actor)
@@ -214,10 +215,60 @@ void UDEStatComponent::HandleDehydrationEnd(AActor* Actor)
 		return;
 	}
 	bIsDehydrated = false;
-	if (GEngine)
+}
+
+void UDEStatComponent::HandleLowBloodStart(AActor* Actor)
+{
+	if (Actor != GetOwner())
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Dehydration End"));
+		return;
 	}
+	bHasLowBlood = true;
+}
+
+void UDEStatComponent::HandleLowBloodEnd(AActor* Actor)
+{
+	if (Actor != GetOwner())
+	{
+		return;
+	}
+	bHasLowBlood = false;
+}
+
+void UDEStatComponent::HandleSprintStart(AActor* Actor)
+{
+	if (Actor == GetOwner())
+	{
+		bIsSprinting = true;
+	}
+}
+
+void UDEStatComponent::HandleSprintEnd(AActor* Actor)
+{
+	if (Actor == GetOwner())
+	{
+		bIsSprinting = false;
+	}
+}
+
+void UDEStatComponent::HandleCrouchStart(AActor* Actor)
+{
+	bIsCrouching = true;
+}
+
+void UDEStatComponent::HandleCrouchEnd(AActor* Actor)
+{
+	bIsCrouching = false;
+}
+
+void UDEStatComponent::HandleFallingStart(AActor* Actor)
+{
+	bIsFalling = true;
+}
+
+void UDEStatComponent::HandleFallingEnd(AActor* Actor)
+{
+	bIsFalling = false;
 }
 
 // Called every frame
@@ -230,22 +281,6 @@ void UDEStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		TickStats(DeltaTime);
 	}
-}
-
-void UDEStatComponent::SetMovementComponentReference(UCharacterMovementComponent* Comp)
-{
-	OwningCharacterMovementComponent = Comp;
-}
-
-void UDEStatComponent::SetSneaking(const bool& IsSneaking)
-{
-	bIsSneaking = IsSneaking;
-	if (bIsSprinting && !bIsSneaking)
-	{
-		return;
-	}
-	bIsSprinting = false;
-	OwningCharacterMovementComponent->MaxWalkSpeed = bIsSneaking ? SneakSpeed : WalkSpeed;
 }
 
 float UDEStatComponent::GetStatPercentile(const EDEStatType Stat) const
@@ -266,28 +301,12 @@ float UDEStatComponent::GetStatPercentile(const EDEStatType Stat) const
 	return -1.f;
 }
 
-bool UDEStatComponent::CanSprint() const
-{
-	return Stamina.GetCurrentValue() > 0.f;
-}
-
-void UDEStatComponent::SetSprinting(const bool& IsSprinting)
-{
-	bIsSprinting = IsSprinting;
-	if (bIsSneaking && !bIsSprinting)
-	{
-		return;
-	}
-	bIsSneaking = false;
-	OwningCharacterMovementComponent->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
-}
-
 bool UDEStatComponent::CanJump()
 {
-	return Stamina.GetCurrentValue() >= JumpCost;
+	return !bIsExhausted && Stamina.GetCurrentValue() >= JumpCost;
 }
 
-void UDEStatComponent::HasJumped()
+void UDEStatComponent::ConsumeJumpStamina()
 {
 	Stamina.Adjust(0 - JumpCost);
 }

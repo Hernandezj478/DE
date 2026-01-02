@@ -11,9 +11,8 @@ enum class EDEStatType : uint8
 	ST_SATIATION	UMETA(DisplayName = "SATIATION"),
 	ST_HYDRATION	UMETA(DisplayName = "HYDRATION"),
 	ST_BLOOD		UMETA(DisplayName = "BLOOD"),
-	// Calories
-	// Protein
-	// Fats
-	// Carbs
-	// Vitamin
+	ST_PROTEIN		UMETA(DisplayName = "PROTEIN"),
+	ST_FATS			UMETA(DisplayName = "FATS"),
+	ST_CARBS		UMETA(DisplayName = "CARBS"),
+	ST_VITAMINS		UMETA(DisplayName = "VITAMINS"),
 };
