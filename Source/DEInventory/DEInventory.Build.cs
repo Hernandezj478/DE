@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class DEVoxelWorld : ModuleRules
+public class DEInventory : ModuleRules
 {
-    public DEVoxelWorld(ReadOnlyTargetRules Target) : base(Target)
+    public DEInventory(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -18,8 +18,7 @@ public class DEVoxelWorld : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "Slate",
-                "SlateCore"
+                "DEItems"
             }
         );
     }

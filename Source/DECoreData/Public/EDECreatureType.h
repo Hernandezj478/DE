@@ -1,10 +1,10 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "ECreatureType.generated.h"
+#include "EDECreatureType.generated.h"
 
 UENUM(BlueprintType)
-enum class ECreatureType : uint8
+enum class EDECreatureType : uint8
 {
 	CT_DEFULT			UMETA(DisplayName = "Default"),
 	CT_HUMAN			UMETA(DisplayName = "Human"),
