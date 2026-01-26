@@ -21,7 +21,8 @@ public class DECharacters : ModuleRules
                 "Engine",
                 "DECoreData",
                 "DEGameplay", 
-                "DECoreSystems"
+                "DECoreSystems",
+                "DEInventory"
             }
         );
     }

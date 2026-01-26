@@ -5,6 +5,7 @@
 #include "Components/DEMovementStateComponent.h"
 #include "Components/DEStatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "DEInventoryComponent.h"
 
 
 // Sets default values
@@ -59,5 +60,10 @@ void ADECharacterBase::Tick(float DeltaTime)
 void ADECharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+UActorComponent* ADECharacterBase::GetCharacterInventory() const
+{
+	return InventoryComponent;
 }
 

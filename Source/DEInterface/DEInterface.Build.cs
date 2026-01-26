@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class DEInventory : ModuleRules
+public class DEInterface : ModuleRules
 {
-    public DEInventory(ReadOnlyTargetRules Target) : base(Target)
+    public DEInterface(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -10,7 +10,6 @@ public class DEInventory : ModuleRules
             new string[]
             {
                 "Core",
-                "DEInterface"
             }
         );
 
@@ -19,7 +18,6 @@ public class DEInventory : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "DEItems"
             }
         );
     }

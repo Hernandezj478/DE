@@ -8,6 +8,7 @@
 
 class UDEStatComponent;
 class UDEMovementStateComponent;
+class UDEInventoryComponent;
 
 UCLASS(Abstract, NotBlueprintable)
 class DECHARACTERS_API ADECharacterBase : public ACharacter
@@ -23,6 +24,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	UFUNCTION(BlueprintCallable)
+	UActorComponent* GetCharacterInventory() const;
 	
 protected:
 	// Called when the game starts or when spawned
@@ -43,4 +47,7 @@ protected:
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	UDEStatComponent* Statline;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = true))
+	UDEInventoryComponent* InventoryComponent;
 };
