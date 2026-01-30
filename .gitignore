@@ -97,3 +97,7 @@ DerivedDataCache/*
 .idea
 # Drawio
 *.bkp
+
+
+#Test ignore
+/Test_To_Remove/*
