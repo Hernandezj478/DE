@@ -3,7 +3,7 @@
 
 #include "InventoryComponent.h"
 
-#include "DEItemData.h"
+#include "ItemData.h"
 
 
 UInventoryComponent::UInventoryComponent()

@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "DEItemData.generated.h"
+#include "ItemData.generated.h"
 
 USTRUCT(BlueprintType)
 struct FItemData : public FTableRowBase
