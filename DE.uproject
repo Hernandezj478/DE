@@ -10,12 +10,12 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DECharacters",
+			"Name": "Characters",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DECoreData",
+			"Name": "CoreData",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
@@ -25,27 +25,32 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DECoreSystems",
+			"Name": "CoreSystems",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DEGameplay",
+			"Name": "Gameplay",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DEItems",
+			"Name": "Items",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DEInventory",
+			"Name": "Inventory",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DEInterface",
+			"Name": "Interface",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "UtilityFeatures",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
