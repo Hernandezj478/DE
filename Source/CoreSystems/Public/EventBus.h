@@ -36,8 +36,6 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnFallingEnd, AActor*);
 #pragma endregion
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*);
 
-
-
 UCLASS()
 class CORESYSTEMS_API UEventBus : public UEngineSubsystem
 {

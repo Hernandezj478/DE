@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class Characters : ModuleRules
+public class UtilityFeatures : ModuleRules
 {
-    public Characters(ReadOnlyTargetRules Target) : base(Target)
+    public UtilityFeatures(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -10,7 +10,6 @@ public class Characters : ModuleRules
             new string[]
             {
                 "Core",
-                "EnhancedInput",
             }
         );
 
@@ -19,11 +18,8 @@ public class Characters : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "CoreData",
-                "Gameplay", 
-                "CoreSystems",
-                "Inventory",
-                "UtilityFeatures"
+                "Slate",
+                "SlateCore"
             }
         );
     }

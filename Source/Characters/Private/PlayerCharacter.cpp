@@ -11,6 +11,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/MovementStateComponent.h"
+#include "Logger.h"
+
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
