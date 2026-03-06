@@ -52,7 +52,6 @@ public:
 	void UpdateTemperature(int NewTemperature);
 	
 #pragma endregion
-	
-	
+
 	static UMessagingSubsystem* Get();
 };
