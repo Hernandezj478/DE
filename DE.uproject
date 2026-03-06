@@ -20,11 +20,6 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "DECore",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "CoreSystems",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
@@ -51,6 +46,16 @@
 		},
 		{
 			"Name": "UtilityFeatures",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "MessageHandler",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Environment",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}

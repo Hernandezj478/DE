@@ -1,15 +1,15 @@
 ﻿using UnrealBuildTool;
 
-public class Gameplay : ModuleRules
+public class MessageHandler : ModuleRules
 {
-    public Gameplay(ReadOnlyTargetRules Target) : base(Target)
+    public MessageHandler(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core"
+                "Core",
             }
         );
 
@@ -18,8 +18,8 @@ public class Gameplay : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "CoreSystems",
                 "CoreData",
+                "UtilityFeatures"
             }
         );
     }

@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class DECore : ModuleRules
+public class Environment : ModuleRules
 {
-    public DECore(ReadOnlyTargetRules Target) : base(Target)
+    public Environment(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -18,8 +18,9 @@ public class DECore : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "Slate",
-                "SlateCore"
+                "UtilityFeatures",
+                "CoreData",
+                "MessageHandler"
             }
         );
     }

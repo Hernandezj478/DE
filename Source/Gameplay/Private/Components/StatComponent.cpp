@@ -271,6 +271,11 @@ void UStatComponent::HandleFallingEnd(AActor* Actor)
 	bIsFalling = false;
 }
 
+void UStatComponent::Sprint(bool bSprint)
+{
+	bIsSprinting = bSprint;
+}
+
 // Called every frame
 void UStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                      FActorComponentTickFunction* ThisTickFunction)

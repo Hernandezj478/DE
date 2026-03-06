@@ -6,10 +6,6 @@
 #include "Subsystems/EngineSubsystem.h"
 #include "EventBus.generated.h"
 
-/**
- * 
- */
-
 #pragma region Movement
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnSprintStart, AActor*);
@@ -34,8 +30,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnFallingStart, AActor*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnFallingEnd, AActor*);
 
 #pragma endregion
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*);
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnDeath, AActor*);
 UCLASS()
 class CORESYSTEMS_API UEventBus : public UEngineSubsystem
 {
@@ -58,6 +54,7 @@ public:
 	
 #pragma endregion
 	
+#pragma region Stats
 	FOnStarvationStart OnStarvationStart;
 	FOnStarvationEnd OnStarvationEnd;
 	FOnDehydrationStart OnDehydrationStart;
@@ -65,6 +62,7 @@ public:
 	FOnLowBloodStart OnLowBloodStart;
 	FOnLowBloodEnd OnLowBloodEnd;
 	FOnDeath FOnDeath;
+#pragma endregion
 	
 	// Global accessor
 	static UEventBus* Get();

@@ -16,6 +16,18 @@ public class DEEditorTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "Characters", "CoreData", "DECore", "CoreSystems", "Gameplay", "Items", "Inventory", "Interface", "UtilityFeatures" });
+		ExtraModuleNames.AddRange(new string[]
+		{
+			"Characters", 
+			"CoreData", 
+			"CoreSystems", 
+			"Gameplay", 
+			"Items", 
+			"Inventory", 
+			"Interface", 
+			"UtilityFeatures", 
+			"MessageHandler", 
+			"Environment"
+		});
 	}
 }

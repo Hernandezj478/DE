@@ -34,7 +34,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void AdjustStat(const EStatTypes Stat, const float& Amount);
-
+	
+	UFUNCTION(BlueprintCallable)
+	void Sprint(bool bSprint);
 	
 protected:
 	// Called when the game starts
@@ -89,6 +91,10 @@ private:
 	
 	bool bIsExhausted = false;
 	
+	/**
+	 * Refactor how we handle the stats. we will move out of event based calls for each stat so we are not
+	 * broadcasting events every tick.
+	 */
 	void HandleStarvationStart(AActor* Actor);
 	void HandleStarvationEnd(AActor* Actor);
 	void HandleDehydrationStart(AActor* Actor);
@@ -102,7 +108,6 @@ private:
 	void HandleCrouchEnd(AActor* Actor);
 	void HandleFallingStart(AActor* Actor);
 	void HandleFallingEnd(AActor* Actor);
-	
 	
 	bool bIsStarving = false;
 	bool bIsDehydrated = false;

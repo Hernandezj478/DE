@@ -40,6 +40,7 @@ void ACharacterBase::CharacterJump()
 	Jump();
 }
 
+
 void ACharacterBase::SetSprinting(const bool& bSprinting)
 {
 	MovementStateComponent->RequestSprint(bSprinting);

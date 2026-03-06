@@ -3,6 +3,7 @@
 
 #include "Components/MovementStateComponent.h"
 #include "EventBus.h"
+#include "CharacterBase.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
