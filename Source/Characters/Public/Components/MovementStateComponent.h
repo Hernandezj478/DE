@@ -8,15 +8,6 @@
 
 class UEventBus;
 
-UENUM(BlueprintType)
-enum MovementState : uint8
-{
-	WALK,
-	SPRINT,
-	CROUCH,
-	FALLING
-};
-
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class CHARACTERS_API UMovementStateComponent : public UActorComponent
 {
