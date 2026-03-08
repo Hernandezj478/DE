@@ -41,9 +41,9 @@ void UMessagingSubsystem::UpdateTemperature(int NewTemperature)
 
 UMessagingSubsystem* UMessagingSubsystem::Get()
 {
-	if (!GEngine->GameViewport->GetWorld())
+	if (!GEngine)
 	{
 		return nullptr;
 	}
-	return GEngine->GameViewport->GetWorld()->GetSubsystem<UMessagingSubsystem>();
+	return GEngine->GetEngineSubsystem<UMessagingSubsystem>();
 }

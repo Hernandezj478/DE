@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Subsystems/WorldSubsystem.h"
+#include "Subsystems/EngineSubsystem.h"
 #include "FTimeData.h"
 #include "MessagingSubsystem.generated.h"
 
@@ -19,7 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FYearChangedDelegate, int, Year);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTemperatureChangedDelegate, float, CurrentTemp);
 
 UCLASS()
-class MESSAGEHANDLER_API UMessagingSubsystem : public UWorldSubsystem
+class MESSAGEHANDLER_API UMessagingSubsystem : public UEngineSubsystem
 {
 	GENERATED_BODY()
 public:

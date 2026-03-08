@@ -17,8 +17,8 @@ ALightController::ALightController()
 
 void ALightController::TimeChangedUpdate(FTimeData TimeData)
 {
-	Logger::GetInstance()->AddMessage((TEXT("TimeChangedUpdate: %s"), *TimeData.GetTimeString()), DEBUG);
 	CurrentTime = TimeData;
+	Logger::GetInstance()->AddMessage((TEXT("TimeData: %s"), TimeData.GetTimeString()),DEBUG);
 	UpdateFromNewTimeData();
 }
 
