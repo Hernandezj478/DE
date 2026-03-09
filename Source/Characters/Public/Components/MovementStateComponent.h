@@ -18,7 +18,7 @@ public:
 	UMovementStateComponent();
 
 	bool CanSprint() const;
-	void RequestSprint(const bool& bRequested);
+	bool RequestSprint(const bool& bRequested);
 	void RequestCrouch(const bool& bRequested);
 	float GetWalkSpeed() const;
 	

@@ -128,10 +128,11 @@ bool UMovementStateComponent::CanSprint() const
 	return bCanSprint && !bIsFalling;
 }
 
-void UMovementStateComponent::RequestSprint(const bool& bRequested)
+bool UMovementStateComponent::RequestSprint(const bool& bRequested)
 {
 	bSprintRequested = bRequested;
 	EvaluateSprintState();
+	return bIsSprinting;
 }
 
 void UMovementStateComponent::RequestCrouch(const bool& bRequested)
@@ -148,6 +149,7 @@ void UMovementStateComponent::SprintStart()
 	}
 	bIsSprinting = true;
 	ApplySprintSpeed();
+	// Might remove this call, for now we dont need this to communicate with statline to drain stamina
 	if (UEventBus* Bus = UEventBus::Get())
 	{
 		Bus->OnSprintStart.Broadcast(GetOwner());

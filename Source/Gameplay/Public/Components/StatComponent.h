@@ -36,7 +36,7 @@ public:
 	void AdjustStat(const EStatTypes Stat, const float& Amount);
 	
 	UFUNCTION(BlueprintCallable)
-	void Sprint(bool bSprint);
+	void SetSprint(bool bSprint);
 	
 protected:
 	// Called when the game starts
@@ -101,9 +101,7 @@ private:
 	void HandleDehydrationEnd(AActor* Actor);
 	void HandleLowBloodStart(AActor* Actor);
 	void HandleLowBloodEnd(AActor* Actor);
-	
-	void HandleSprintStart(AActor* Actor);
-	void HandleSprintEnd(AActor* Actor);
+
 	void HandleCrouchStart(AActor* Actor);
 	void HandleCrouchEnd(AActor* Actor);
 	void HandleFallingStart(AActor* Actor);

@@ -43,7 +43,7 @@ void ACharacterBase::CharacterJump()
 
 void ACharacterBase::SetSprinting(const bool& bSprinting)
 {
-	MovementStateComponent->RequestSprint(bSprinting);
+	Statline->SetSprint(MovementStateComponent->RequestSprint(bSprinting));
 }
 
 void ACharacterBase::SetCrouch(const bool& bCrouch)

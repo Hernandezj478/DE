@@ -25,8 +25,6 @@ void UStatComponent::BeginPlay()
 		Bus->OnDehydrationEnd.AddUObject(this, &UStatComponent::HandleDehydrationEnd);
 		Bus->OnLowBloodStart.AddUObject(this, &UStatComponent::HandleLowBloodStart);
 		Bus->OnLowBloodEnd.AddUObject(this, &UStatComponent::HandleLowBloodEnd);
-		Bus->OnSprintStart.AddUObject(this, &UStatComponent::HandleSprintStart);
-		Bus->OnSprintEnd.AddUObject(this, &UStatComponent::HandleSprintEnd);
 		Bus->OnFallingStart.AddUObject(this, &UStatComponent::HandleFallingStart);
 		Bus->OnFallingEnd.AddUObject(this, &UStatComponent::HandleFallingEnd);
 	}
@@ -235,22 +233,6 @@ void UStatComponent::HandleLowBloodEnd(AActor* Actor)
 	bHasLowBlood = false;
 }
 
-void UStatComponent::HandleSprintStart(AActor* Actor)
-{
-	if (Actor == GetOwner())
-	{
-		bIsSprinting = true;
-	}
-}
-
-void UStatComponent::HandleSprintEnd(AActor* Actor)
-{
-	if (Actor == GetOwner())
-	{
-		bIsSprinting = false;
-	}
-}
-
 void UStatComponent::HandleCrouchStart(AActor* Actor)
 {
 	bIsCrouching = true;
@@ -271,7 +253,7 @@ void UStatComponent::HandleFallingEnd(AActor* Actor)
 	bIsFalling = false;
 }
 
-void UStatComponent::Sprint(bool bSprint)
+void UStatComponent::SetSprint(bool bSprint)
 {
 	bIsSprinting = bSprint;
 }
