@@ -2,17 +2,12 @@
 
 
 #include "EnvironmentManager.h"
-
-#include <format>
-#include <string>
-
 #include "MessagingSubsystem.h"
 #include "Logger.h"
 
 void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	UE_LOG(LogEnvironment, Log, TEXT("UEnvironmentManager::Initialize"));
 	Logger::GetInstance()->AddMessage("UEnvironmentManager::Initialize", DEBUG);
 	if (UWorld* pWorld = GetWorld())
 	{
@@ -20,13 +15,11 @@ void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
 		MapName = pWorld->RemovePIEPrefix(MapName);
 		if (MapName.Equals("MainMenu", ESearchCase::IgnoreCase))
 		{
-			UE_LOG(LogEnvironment, Log, TEXT("UEnvironmentManager::Initialize: MainMenu"));
 			Logger::GetInstance()->AddMessage("UEnvironmentManager::Initialize: MainMenu", DEBUG);
 			bCanEverTick = false;
 		}
 		SetTickableTickType(ETickableTickType::Conditional);
 	}
-
 }
 
 void UEnvironmentManager::Deinitialize()
@@ -38,9 +31,12 @@ void UEnvironmentManager::Tick(float DeltaTime)
 {
 	UpdateTime(DeltaTime);
 	UpdateTimeOfDayRef();
-	if (bTimeWasUpdated && pMessageManager)
+	if (bTimeWasUpdated)
 	{
-		pMessageManager->UpdateTime(CurrentTime);
+		if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
+		{
+			MessagingSubsystem->UpdateTime(CurrentTime);
+		}
 		bTimeWasUpdated = false;
 	}
 }
@@ -68,13 +64,6 @@ void UEnvironmentManager::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	CalculateDayLength();
-	UE_LOG(LogEnvironment, Log, TEXT("UEnvironment::OnWorldBeginPlay"));
-	Logger::GetInstance()->AddMessage(FString::Printf(TEXT("UEnvironmentManager::OnWorldBeginPlay: Day length calculated %f minutes"), MinuteLength), DEBUG);
-	
-	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-	{
-		pMessageManager = MessagingSubsystem;
-	}
 }
 
 void UEnvironmentManager::UpdateTime(float DeltaTime)
@@ -96,9 +85,9 @@ void UEnvironmentManager::AdvanceMinute()
 		CurrentTime.Minute = 0;
 		AdvanceHour();
 	}
-	if (pMessageManager)
+	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
 	{
-		pMessageManager->UpdateMinute(CurrentTime.Minute);
+		MessagingSubsystem->UpdateMinute(CurrentTime.Minute);
 	}
 }
 
@@ -111,11 +100,10 @@ void UEnvironmentManager::AdvanceHour()
 		CurrentTime.Hour = 0;
 		AdvanceDay();
 	}
-	if (pMessageManager)
+	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
 	{
-		pMessageManager->UpdateHourOfDay(CurrentTime.Hour);
+		MessagingSubsystem->UpdateHourOfDay(CurrentTime.Hour);
 	}
-	Logger::GetInstance()->AddMessage("Time has advanced 1 hour", DEBUG);
 }
 
 void UEnvironmentManager::AdvanceDay()
@@ -168,9 +156,9 @@ void UEnvironmentManager::AdvanceDay()
 	default:
 		break;
 	}
-	if (pMessageManager)
+	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
 	{
-		pMessageManager->UpdateDayOfYear(CurrentTime.DayOfYear);
+		MessagingSubsystem->UpdateDayOfYear(CurrentTime.DayOfYear);
 	}
 }
 
@@ -183,9 +171,9 @@ void UEnvironmentManager::AdvanceMonth()
 		CurrentTime.Month = 1;
 		AdvanceYear();
 	}
-	if (pMessageManager)
+	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
 	{
-		pMessageManager->UpdateMonth(CurrentTime.Month);
+		MessagingSubsystem->UpdateMonth(CurrentTime.Month);
 	}
 }
 
@@ -193,9 +181,9 @@ void UEnvironmentManager::AdvanceYear()
 {
 	bTimeWasUpdated = true;
 	CurrentTime.Year++;
-	if (pMessageManager)
+	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
 	{
-		pMessageManager->UpdateYear(CurrentTime.Year);
+		MessagingSubsystem->UpdateYear(CurrentTime.Year);
 	}
 }
 

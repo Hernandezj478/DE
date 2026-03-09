@@ -16,7 +16,7 @@ struct FTimeData
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
 	int DayOfMonth = 1;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
-	int Hour = 12;
+	int Hour = 11;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
 	int Minute = 0;
 	

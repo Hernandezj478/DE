@@ -30,7 +30,7 @@ public:
 		return pInstance;
 	}
 	
-	void AddMessage(FString Message, ErrorLevel Level)
+	void AddMessage(FString Message, ErrorLevel Level, int Key = -1)
 	{
 		FString LogLine;
 		LogLine += "[";
@@ -48,7 +48,7 @@ public:
 #if UE_EDITOR
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(0, 5.f, ErrorLevelAsColor(Level), Message);
+			GEngine->AddOnScreenDebugMessage(Key, 5.f, ErrorLevelAsColor(Level), Message);
 		}
 #endif
 	}

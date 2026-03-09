@@ -18,7 +18,7 @@ ALightController::ALightController()
 void ALightController::TimeChangedUpdate(FTimeData TimeData)
 {
 	CurrentTime = TimeData;
-	Logger::GetInstance()->AddMessage((TEXT("TimeData: %s"), TimeData.GetTimeString()),DEBUG);
+	//Logger::GetInstance()->AddMessage((TEXT("TimeData: %s"), TimeData.GetTimeString()),DEBUG);
 	UpdateFromNewTimeData();
 }
 
@@ -28,7 +28,6 @@ void ALightController::BeginPlay()
 	Super::BeginPlay();
 	if (bHasDayNightCycle)
 	{
-		// GetWorld()->GetSubsystem<UMessagingSubsystem>()->OnTimeChanged.AddDynamic(this, &ALightController::TimeChangedUpdate);
 		if (UMessagingSubsystem* Messaging = UMessagingSubsystem::Get())
 		{
 			Messaging->OnTimeChanged.AddDynamic(this, &ALightController::TimeChangedUpdate);
@@ -47,16 +46,16 @@ void ALightController::UpdateSunLight()
 {
 	if (!IsValid(SunLightActor) || !IsValid(DailySunRotation))
 	{
+		Logger::GetInstance()->AddMessage("ALightController::UpdateSunLight: SunLightActor or DailySunRotation is not valid", ERROR);
 		return;
 	}
 	float CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
 	float NewLightIntensity = DailySunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay).A;
-	FLinearColor ColorAsRotation = DailySunRotation->GetLinearColorValue(CurrentTimeOfDay);
-	
+	FLinearColor ColorAsRotation = DailySunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay);
 	if (IsValid(AnnualSunRotation))
 	{
 		NewLightIntensity += AnnualSunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay).A;
-		ColorAsRotation += AnnualSunRotation->GetLinearColorValue(CurrentTimeOfDay);
+		ColorAsRotation += AnnualSunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay);
 	}
 	
 	FRotator NewLightRotation = FRotator(ColorAsRotation.G, ColorAsRotation.B, ColorAsRotation.R);
