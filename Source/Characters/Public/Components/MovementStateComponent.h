@@ -19,7 +19,7 @@ public:
 
 	bool CanSprint() const;
 	bool RequestSprint(const bool& bRequested);
-	void RequestCrouch(const bool& bRequested);
+	bool RequestCrouch(const bool& bRequested);
 	float GetWalkSpeed() const;
 	
 protected:

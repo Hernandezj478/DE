@@ -135,10 +135,11 @@ bool UMovementStateComponent::RequestSprint(const bool& bRequested)
 	return bIsSprinting;
 }
 
-void UMovementStateComponent::RequestCrouch(const bool& bRequested)
+bool UMovementStateComponent::RequestCrouch(const bool& bRequested)
 {
 	bCrouchRequested = bRequested;
 	EvaluateCrouchState();
+	return bIsCrouching;
 }
 
 void UMovementStateComponent::SprintStart()
@@ -150,10 +151,10 @@ void UMovementStateComponent::SprintStart()
 	bIsSprinting = true;
 	ApplySprintSpeed();
 	// Might remove this call, for now we dont need this to communicate with statline to drain stamina
-	if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnSprintStart.Broadcast(GetOwner());
-	}
+	// if (UEventBus* Bus = UEventBus::Get())
+	// {
+	// 	Bus->OnSprintStart.Broadcast(GetOwner());
+	// }
 }
 
 void UMovementStateComponent::SprintEnd()
@@ -164,10 +165,10 @@ void UMovementStateComponent::SprintEnd()
 	}
 	bIsSprinting = false;
 	ApplyWalkSpeed();
-	if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnSprintEnd.Broadcast(GetOwner());
-	}
+	// if (UEventBus* Bus = UEventBus::Get())
+	// {
+	// 	Bus->OnSprintEnd.Broadcast(GetOwner());
+	// }
 }
 
 void UMovementStateComponent::CrouchStart()
@@ -178,10 +179,10 @@ void UMovementStateComponent::CrouchStart()
 	}
 	bIsCrouching = true;
 	ApplyCrouchSpeed();
-	if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnCrouchStart.Broadcast(GetOwner());
-	}
+	// if (UEventBus* Bus = UEventBus::Get())
+	// {
+	// 	Bus->OnCrouchStart.Broadcast(GetOwner());
+	// }
 }
 
 void UMovementStateComponent::CrouchEnd()
@@ -193,10 +194,10 @@ void UMovementStateComponent::CrouchEnd()
 	bIsCrouching = false;
 	ApplyWalkSpeed();
 	EvaluateSprintState();
-	if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnCrouchEnd.Broadcast(GetOwner());
-	}
+	// if (UEventBus* Bus = UEventBus::Get())
+	// {
+	// 	Bus->OnCrouchEnd.Broadcast(GetOwner());
+	// }
 }
 
 void UMovementStateComponent::FallingStart()

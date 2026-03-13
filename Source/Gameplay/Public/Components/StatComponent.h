@@ -38,6 +38,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetSprint(bool bSprint);
 	
+	UFUNCTION(BlueprintCallable)
+	void SetCrouch(bool bCrouch);
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

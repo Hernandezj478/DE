@@ -29,7 +29,7 @@ private:
 	
 	FTimeData CurrentTime;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,meta=(AllowPrivateAccess=true))
-	float DayLengthInMinutes = 30;
+	float DayLengthInMinutes = 5;
 	float TimeDecay = 0;
 	float MinuteLength = 0;
 	
@@ -43,10 +43,8 @@ private:
 	void AdvanceMonth();
 	void AdvanceYear();
 	void SetDayOfYear();
-	UFUNCTION(BLueprintCallable,meta=(AllowPrivateAccess=true))
+	UFUNCTION(BlueprintCallable,meta=(AllowPrivateAccess=true))
 	void CalculateDayLength();
-	void UpdateTimeOfDayRef();
 	void UpdateLighting();
 	void UpdateLightRotation();
-	void AddDayOfYear();
 };

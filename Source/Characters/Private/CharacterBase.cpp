@@ -48,7 +48,7 @@ void ACharacterBase::SetSprinting(const bool& bSprinting)
 
 void ACharacterBase::SetCrouch(const bool& bCrouch)
 {
-	MovementStateComponent->RequestCrouch(bCrouch);
+	Statline->SetCrouch(MovementStateComponent->RequestCrouch(bCrouch));
 }
 
 // Called every frame

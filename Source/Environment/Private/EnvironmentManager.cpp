@@ -30,7 +30,6 @@ void UEnvironmentManager::Deinitialize()
 void UEnvironmentManager::Tick(float DeltaTime)
 {
 	UpdateTime(DeltaTime);
-	UpdateTimeOfDayRef();
 	if (bTimeWasUpdated)
 	{
 		if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
@@ -109,8 +108,8 @@ void UEnvironmentManager::AdvanceHour()
 void UEnvironmentManager::AdvanceDay()
 {
 	bTimeWasUpdated = true;
-	AddDayOfYear();
 	CurrentTime.DayOfMonth++;
+	CurrentTime.DayOfYear++;
 	switch (CurrentTime.Month)
 	{
 	case 1:
@@ -181,6 +180,7 @@ void UEnvironmentManager::AdvanceYear()
 {
 	bTimeWasUpdated = true;
 	CurrentTime.Year++;
+	CurrentTime.DayOfYear = 1;
 	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
 	{
 		MessagingSubsystem->UpdateYear(CurrentTime.Year);
@@ -225,24 +225,10 @@ void UEnvironmentManager::CalculateDayLength()
 	TimeDecay = MinuteLength;
 }
 
-void UEnvironmentManager::UpdateTimeOfDayRef()
-{
-	CurrentTimeOfDay = (CurrentTime.Hour * 60) + CurrentTime.Minute;
-}
-
 void UEnvironmentManager::UpdateLighting()
 {
 }
 
 void UEnvironmentManager::UpdateLightRotation()
 {
-}
-
-void UEnvironmentManager::AddDayOfYear()
-{
-	CurrentTime.DayOfYear++;
-	if (CurrentTime.DayOfYear > ((CurrentTime.Year % 4 == 0) && (!(CurrentTime.Year % 100 == 0) || (CurrentTime.Year % 400 == 0)) ? 366 : 365))
-	{
-		CurrentTime.DayOfYear = 1;
-	}
 }

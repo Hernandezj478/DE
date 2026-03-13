@@ -258,6 +258,11 @@ void UStatComponent::SetSprint(bool bSprint)
 	bIsSprinting = bSprint;
 }
 
+void UStatComponent::SetCrouch(bool bCrouch)
+{
+	bIsCrouching = bCrouch;
+}
+
 // Called every frame
 void UStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                      FActorComponentTickFunction* ThisTickFunction)

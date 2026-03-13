@@ -26,6 +26,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	bool bHasDayNightCycle = true;
 	
@@ -50,6 +51,7 @@ private:
 	UPROPERTY(VisibleAnywhere, meta=(AllowPrivateAccess = "true"))
 	FTimeData CurrentTime;
 	
+	float CurrentTimeOfDay = 0;
 	void UpdateFromNewTimeData();
 	void UpdateSunLight();
 	void UpdateSkyLight();

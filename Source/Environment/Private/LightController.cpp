@@ -2,11 +2,14 @@
 
 
 #include "LightController.h"
-#include "MessagingSubsystem.h"
+
 #include "Components/LightComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Curves/CurveLinearColor.h"
 #include "Engine/DirectionalLight.h"
+#include "Engine/SkyLight.h"
 #include "Logger.h"
+#include "MessagingSubsystem.h"
 
 // Sets default values
 ALightController::ALightController()
@@ -18,7 +21,7 @@ ALightController::ALightController()
 void ALightController::TimeChangedUpdate(FTimeData TimeData)
 {
 	CurrentTime = TimeData;
-	//Logger::GetInstance()->AddMessage((TEXT("TimeData: %s"), TimeData.GetTimeString()),DEBUG);
+	CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
 	UpdateFromNewTimeData();
 }
 
@@ -49,7 +52,6 @@ void ALightController::UpdateSunLight()
 		Logger::GetInstance()->AddMessage("ALightController::UpdateSunLight: SunLightActor or DailySunRotation is not valid", ERROR);
 		return;
 	}
-	float CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
 	float NewLightIntensity = DailySunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay).A;
 	FLinearColor ColorAsRotation = DailySunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay);
 	if (IsValid(AnnualSunRotation))
@@ -67,7 +69,14 @@ void ALightController::UpdateSunLight()
 
 void ALightController::UpdateSkyLight()
 {
-	
+	if (!IsValid(SkyLight))
+	{
+		return;
+	}
+	float NewLightIntensity = SkyLightDailyColor->GetUnadjustedLinearColorValue(CurrentTimeOfDay).A;
+	SkyLight->GetLightComponent()->SetIntensity(NewLightIntensity);
+	FLinearColor NewSkyLightColor = SkyLightDailyColor->GetUnadjustedLinearColorValue(CurrentTimeOfDay);
+	SkyLight->GetLightComponent()->SetLightColor(NewSkyLightColor);
 }
 
 void ALightController::UpdateMoonLight()
