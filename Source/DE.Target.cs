@@ -11,10 +11,10 @@ public class DETarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V6;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_7;
 		ExtraModuleNames.Add("DE");
-		RegisterModulesCreatedByRider();
+		RegisterModules();
 	}
 
-	private void RegisterModulesCreatedByRider()
+	private void RegisterModules()
 	{
 		ExtraModuleNames.AddRange(new string[]
 		{
