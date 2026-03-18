@@ -44,7 +44,7 @@ protected:
 	void SprintEnd();
 	void CrouchStart();
 	void CrouchEnd();
-	
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;

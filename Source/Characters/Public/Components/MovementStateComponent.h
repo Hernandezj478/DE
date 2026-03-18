@@ -30,7 +30,7 @@ protected:
 private:
 	
 	class UCharacterMovementComponent* MovementComponent; 
-	
+
 	bool bSprintRequested = false;
 	bool bCrouchRequested = false;
 	bool bIsSprinting = false;

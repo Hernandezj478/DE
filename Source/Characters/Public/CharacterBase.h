@@ -38,16 +38,16 @@ protected:
 #pragma region Movement
 	bool CanCharacterJump() const;
 	void CharacterJump();
-	
+
 	void SetSprinting(const bool& bSprinting);
 	void SetCrouch(const bool& bCrouch);
-	
+
 #pragma endregion Movement
-	
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	UStatComponent* Statline;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = true))
 	UInventoryComponent* InventoryComponent;
 };
