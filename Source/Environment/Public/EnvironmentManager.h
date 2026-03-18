@@ -36,6 +36,8 @@ private:
 	bool bTimeWasUpdated = true;
 	int CurrentTimeOfDay = 0;
 	
+	class UMessagingSubsystem* pMessanger;
+
 	void UpdateTime(float DeltaTime);
 	void AdvanceMinute();
 	void AdvanceHour();

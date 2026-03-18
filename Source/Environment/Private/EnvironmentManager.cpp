@@ -8,6 +8,7 @@
 void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	Collection.InitializeDependency(UMessagingSubsystem::StaticClass());
 	Logger::GetInstance()->AddMessage("UEnvironmentManager::Initialize", DEBUG);
 	if (UWorld* pWorld = GetWorld())
 	{
@@ -19,6 +20,10 @@ void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
 			bCanEverTick = false;
 		}
 		SetTickableTickType(ETickableTickType::Conditional);
+	}
+	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
+	{
+		pMessanger = MessagingSubsystem;
 	}
 }
 
@@ -32,10 +37,7 @@ void UEnvironmentManager::Tick(float DeltaTime)
 	UpdateTime(DeltaTime);
 	if (bTimeWasUpdated)
 	{
-		if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-		{
-			MessagingSubsystem->UpdateTime(CurrentTime);
-		}
+		pMessanger->UpdateTime(CurrentTime);
 		bTimeWasUpdated = false;
 	}
 }
@@ -84,10 +86,7 @@ void UEnvironmentManager::AdvanceMinute()
 		CurrentTime.Minute = 0;
 		AdvanceHour();
 	}
-	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-	{
-		MessagingSubsystem->UpdateMinute(CurrentTime.Minute);
-	}
+	pMessanger->UpdateMinute(CurrentTime.Minute);
 }
 
 void UEnvironmentManager::AdvanceHour()
@@ -99,10 +98,7 @@ void UEnvironmentManager::AdvanceHour()
 		CurrentTime.Hour = 0;
 		AdvanceDay();
 	}
-	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-	{
-		MessagingSubsystem->UpdateHourOfDay(CurrentTime.Hour);
-	}
+	pMessanger->UpdateHourOfDay(CurrentTime.Hour);
 }
 
 void UEnvironmentManager::AdvanceDay()
@@ -155,10 +151,7 @@ void UEnvironmentManager::AdvanceDay()
 	default:
 		break;
 	}
-	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-	{
-		MessagingSubsystem->UpdateDayOfYear(CurrentTime.DayOfYear);
-	}
+	pMessanger->UpdateDayOfYear(CurrentTime.DayOfYear);
 }
 
 void UEnvironmentManager::AdvanceMonth()
@@ -170,10 +163,7 @@ void UEnvironmentManager::AdvanceMonth()
 		CurrentTime.Month = 1;
 		AdvanceYear();
 	}
-	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-	{
-		MessagingSubsystem->UpdateMonth(CurrentTime.Month);
-	}
+	pMessanger->UpdateMonth(CurrentTime.Month);
 }
 
 void UEnvironmentManager::AdvanceYear()
@@ -181,10 +171,7 @@ void UEnvironmentManager::AdvanceYear()
 	bTimeWasUpdated = true;
 	CurrentTime.Year++;
 	CurrentTime.DayOfYear = 1;
-	if (UMessagingSubsystem* MessagingSubsystem = UMessagingSubsystem::Get())
-	{
-		MessagingSubsystem->UpdateYear(CurrentTime.Year);
-	}
+	pMessanger->UpdateYear(CurrentTime.Year);
 }
 
 void UEnvironmentManager::SetDayOfYear()
