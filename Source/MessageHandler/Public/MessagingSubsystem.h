@@ -16,7 +16,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMonthChangedDelegate, int, Month);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FYearChangedDelegate, int, Year);
 #pragma endregion
 
+#pragma region Temperature
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTemperatureChangedDelegate, float, CurrentTemp);
+#pragma endregion
+
+#pragma region Stats
+DECLARE_MULTICAST_DELEGATE_OneParam(FExhaustionChangedDelegate, bool);
+#pragma endregion
 
 UCLASS()
 class MESSAGEHANDLER_API UMessagingSubsystem : public UEngineSubsystem
@@ -38,9 +44,16 @@ public:
 	FYearChangedDelegate OnYearChanged;
 #pragma endregion
 	
+#pragma region TemperatureDelegate
 	UPROPERTY(BlueprintAssignable, Category = "Broadcast Message|Time")
 	FTemperatureChangedDelegate OnTemperatureChanged;
-	
+#pragma endregion
+
+#pragma region StatDelegates
+	//UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FExhaustionChangedDelegate OnExhaustionChanged;
+#pragma endregion
+
 #pragma region TriggerFunctions
 	void UpdateTime(FTimeData NewTimeData);
 	void UpdateMinute(int Minute);
