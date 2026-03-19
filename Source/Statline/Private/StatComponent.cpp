@@ -1,15 +1,18 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Components/StatComponent.h"
-#include "EventBus.h"
+#include "StatComponent.h"
+#include "MessagingSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 
 UStatComponent::UStatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	if (UMessagingSubsystem* MessagingSubsys = UMessagingSubsystem::Get())
+	{
+		pMessanger = MessagingSubsys;
+	}
 }
-
 
 // Called when the game starts
 void UStatComponent::BeginPlay()
@@ -17,17 +20,20 @@ void UStatComponent::BeginPlay()
 	Super::BeginPlay();
 	
 	// Subscribe to delegates
-	if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnStarvationStart.AddUObject(this, &UStatComponent::HandleStarvationStart);
-		Bus->OnStarvationEnd.AddUObject(this, &UStatComponent::HandleStarvationEnd);
-		Bus->OnDehydrationStart.AddUObject(this, &UStatComponent::HandleDehydrationStart);
-		Bus->OnDehydrationEnd.AddUObject(this, &UStatComponent::HandleDehydrationEnd);
-		Bus->OnLowBloodStart.AddUObject(this, &UStatComponent::HandleLowBloodStart);
-		Bus->OnLowBloodEnd.AddUObject(this, &UStatComponent::HandleLowBloodEnd);
-		Bus->OnFallingStart.AddUObject(this, &UStatComponent::HandleFallingStart);
-		Bus->OnFallingEnd.AddUObject(this, &UStatComponent::HandleFallingEnd);
-	}
+	//if (UEventBus* Bus = UEventBus::Get())
+	//{
+	//	/**
+	//	* We do not need these since we will directly change the flag variables in the tick function.
+	//	*/
+	//	/*Bus->OnStarvationStart.AddUObject(this, &UStatComponent::HandleStarvationStart);
+	//	Bus->OnStarvationEnd.AddUObject(this, &UStatComponent::HandleStarvationEnd);
+	//	Bus->OnDehydrationStart.AddUObject(this, &UStatComponent::HandleDehydrationStart);
+	//	Bus->OnDehydrationEnd.AddUObject(this, &UStatComponent::HandleDehydrationEnd);
+	//	Bus->OnLowBloodStart.AddUObject(this, &UStatComponent::HandleLowBloodStart);
+	//	Bus->OnLowBloodEnd.AddUObject(this, &UStatComponent::HandleLowBloodEnd);*/
+	//	Bus->OnFallingStart.AddUObject(this, &UStatComponent::HandleFallingStart);
+	//	Bus->OnFallingEnd.AddUObject(this, &UStatComponent::HandleFallingEnd);
+	//}
 }
 
 void UStatComponent::TickStats(const float& DeltaTime)
@@ -49,10 +55,7 @@ void UStatComponent::TickStamina(const float& DeltaTime)
 		if (!bIsExhausted)
 		{
 			bIsExhausted = true;
-			if (const UEventBus* Bus = UEventBus::Get())
-			{
-				Bus->OnExhaustionStart.Broadcast(GetOwner());
-			}
+			pMessanger->UpdateExhustion(bIsExhausted);
 		}
 		return;
 	}
@@ -67,10 +70,7 @@ void UStatComponent::TickStamina(const float& DeltaTime)
 		if (!bIsExhausted)
 		{
 			bIsExhausted = true;
-			if (const UEventBus* Bus= UEventBus::Get())
-			{
-				Bus->OnExhaustionStart.Broadcast(GetOwner());
-			}
+			pMessanger->UpdateExhustion(bIsExhausted);
 		}
 		
 		CurrentStaminaExhaustion -= DeltaTime;
@@ -90,10 +90,7 @@ void UStatComponent::TickStamina(const float& DeltaTime)
 	if (bIsExhausted && Stamina.GetCurrentValue() > 10.f)
 	{
 		bIsExhausted = false;
-		if (const UEventBus* Bus = UEventBus::Get())
-		{
-			Bus->OnExhaustionEnd.Broadcast(GetOwner());
-		}
+		pMessanger->UpdateExhustion(bIsExhausted);
 	}
 	Stamina.TickStat(DeltaTime);
 }
@@ -102,17 +99,13 @@ void UStatComponent::TickSatiation(const float& DeltaTime)
 {
 	if (!bIsStarving && Satiation.GetCurrentValue() <= 0.f)
 	{
-		if (const UEventBus* Bus = UEventBus::Get())
-		{
-			Bus->OnStarvationStart.Broadcast(GetOwner());
-		}
+		bIsStarving = true;
+		// TODO: Bradcast starvation message
 	}
 	else if (bIsStarving && Satiation.GetCurrentValue() > 0.f)
 	{
-		if (const UEventBus* Bus = UEventBus::Get())
-		{
-			Bus->OnStarvationEnd.Broadcast(GetOwner());
-		}
+		bIsStarving = false;
+		// TODO: Broadcast starvation message
 	}
 	Satiation.TickStat(DeltaTime);
 }
@@ -121,19 +114,14 @@ void UStatComponent::TickHydration(const float& DeltaTime)
 {
 	if (!bIsDehydrated && Hydration.GetCurrentValue() <= 0.f)
 	{
-		if (const UEventBus* Bus = UEventBus::Get())
-		{
-			Bus->OnDehydrationStart.Broadcast(GetOwner());
-		}
+		bIsDehydrated = true;
+		// TODO: Broadcast dehydration message
+		
 	}
 	else if (bIsDehydrated && Hydration.GetCurrentValue() > 0.f)
 	{
-		{
-			if (const UEventBus* Bus = UEventBus::Get())
-			{
-				Bus->OnDehydrationEnd.Broadcast(GetOwner());
-			}
-		}
+		bIsDehydrated = false;
+		// TODO: Broadcast dehydration message
 	}
 	Hydration.TickStat(DeltaTime);
 }
@@ -164,83 +152,15 @@ void UStatComponent::TickBlood(const float& DeltaTime)
 	}
 	if (!bHasLowBlood && Blood.GetCurrentValue() <= 40.f)
 	{
-		if (const UEventBus* Bus = UEventBus::Get())
-		{
-			Bus->OnLowBloodStart.Broadcast(GetOwner());
-		}
+		bHasLowBlood = true;
+		// TODO: Broadcast low blood message
 	}
 	else if (bHasLowBlood && Blood.GetCurrentValue() > 40.f)
 	{
-		if (const UEventBus* Bus = UEventBus::Get())
-		{
-			Bus->OnLowBloodEnd.Broadcast(GetOwner());
-		}
+		bHasLowBlood = false;
+		// TODO: Braocast low blood message
 	}
 	Blood.TickStat(DeltaTime);
-}
-
-void UStatComponent::HandleStarvationStart(AActor* Actor)
-{
-	if (Actor != GetOwner())
-	{
-		return;
-	}
-	bIsStarving = true;
-}
-
-void UStatComponent::HandleStarvationEnd(AActor* Actor)
-{
-	if(Actor != GetOwner())
-	{
-		return;
-	}
-	bIsStarving = false;
-}
-
-void UStatComponent::HandleDehydrationStart(AActor* Actor)
-{
-	if(Actor != GetOwner())
-	{
-		return;
-	}
-	bIsDehydrated = true;
-}
-
-void UStatComponent::HandleDehydrationEnd(AActor* Actor)
-{
-	if(Actor != GetOwner())
-	{
-		return;
-	}
-	bIsDehydrated = false;
-}
-
-void UStatComponent::HandleLowBloodStart(AActor* Actor)
-{
-	if (Actor != GetOwner())
-	{
-		return;
-	}
-	bHasLowBlood = true;
-}
-
-void UStatComponent::HandleLowBloodEnd(AActor* Actor)
-{
-	if (Actor != GetOwner())
-	{
-		return;
-	}
-	bHasLowBlood = false;
-}
-
-void UStatComponent::HandleCrouchStart(AActor* Actor)
-{
-	bIsCrouching = true;
-}
-
-void UStatComponent::HandleCrouchEnd(AActor* Actor)
-{
-	bIsCrouching = false;
 }
 
 void UStatComponent::HandleFallingStart(AActor* Actor)

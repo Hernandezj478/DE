@@ -9,9 +9,10 @@
 #include "StatComponent.generated.h"
 
 class UCharacterMovementComponent;
+class UMessagingSubsystem;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class GAMEPLAY_API UStatComponent : public UActorComponent
+class STATLINE_API UStatComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
@@ -93,19 +94,12 @@ private:
 	
 	bool bIsExhausted = false;
 	
+	UMessagingSubsystem* pMessanger;
+
 	/**
 	 * Refactor how we handle the stats. we will move out of event based calls for each stat so we are not
 	 * broadcasting events every tick.
 	 */
-	void HandleStarvationStart(AActor* Actor);
-	void HandleStarvationEnd(AActor* Actor);
-	void HandleDehydrationStart(AActor* Actor);
-	void HandleDehydrationEnd(AActor* Actor);
-	void HandleLowBloodStart(AActor* Actor);
-	void HandleLowBloodEnd(AActor* Actor);
-
-	void HandleCrouchStart(AActor* Actor);
-	void HandleCrouchEnd(AActor* Actor);
 	void HandleFallingStart(AActor* Actor);
 	void HandleFallingEnd(AActor* Actor);
 	

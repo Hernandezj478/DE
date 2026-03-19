@@ -2,11 +2,11 @@
 
 
 #include "CharacterBase.h"
-#include "Components/MovementStateComponent.h"
-#include "Components/StatComponent.h"
+#include "MovementStateComponent.h"
+#include "StatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "InventoryComponent.h"
-
+#include "Logger.h"
 
 // Sets default values
 ACharacterBase::ACharacterBase()
@@ -20,6 +20,10 @@ ACharacterBase::ACharacterBase()
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetMesh()->SetIsReplicated(true);
 	Statline = CreateDefaultSubobject<UStatComponent>(TEXT("Statline"));
+	if (!IsValid(Statline))
+	{
+		Logger::GetInstance()->AddMessage("Statline has not been created/initialized", ERROR);
+	}
 	MovementStateComponent = CreateDefaultSubobject<UMovementStateComponent>(TEXT("MovementStateComponent"));
 }
 
@@ -39,7 +43,6 @@ void ACharacterBase::CharacterJump()
 	Statline->ConsumeJumpStamina();
 	Jump();
 }
-
 
 void ACharacterBase::SetSprinting(const bool& bSprinting)
 {

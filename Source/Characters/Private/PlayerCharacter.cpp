@@ -10,7 +10,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Components/MovementStateComponent.h"
+#include "MovementStateComponent.h"
 #include "Logger.h"
 
 
@@ -157,10 +157,6 @@ void APlayerCharacter::TogglePerspective()
 
 void APlayerCharacter::SprintStart()
 {
-	if (!MovementStateComponent)
-	{
-		return;
-	}
 	SetSprinting(true);
 }
 
