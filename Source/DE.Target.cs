@@ -27,7 +27,9 @@ public class DETarget : TargetRules
 			"Interface", 
 			"UtilityFeatures", 
 			"MessageHandler", 
-			"Environment"
-		});
+			"Environment",
+			"Statline",
+            "CharacterMovement"
+        });
 	}
 }

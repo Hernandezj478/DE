@@ -25,11 +25,6 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "Gameplay",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "Items",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
@@ -45,6 +40,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "Gameplay",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "UtilityFeatures",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
@@ -52,10 +52,20 @@
 		{
 			"Name": "MessageHandler",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "EarliestPossible"
 		},
 		{
 			"Name": "Environment",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Statline",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CharacterMovement",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
