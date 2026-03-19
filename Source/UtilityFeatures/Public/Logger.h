@@ -30,7 +30,7 @@ public:
 		return pInstance;
 	}
 	
-	void AddMessage(FString Message, ErrorLevel Level, int Key = -1)
+	void AddMessage(FString Message, ErrorLevel Level, int Key = 0)
 	{
 		FString LogLine;
 		LogLine += "[";
@@ -48,7 +48,7 @@ public:
 #if UE_EDITOR
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(Key, 5.f, ErrorLevelAsColor(Level), Message);
+			GEngine->AddOnScreenDebugMessage(Key, 1.f, ErrorLevelAsColor(Level), Message);
 		}
 #endif
 	}
@@ -72,7 +72,7 @@ private:
 		FString Second = IntToString(Time.Now().GetSecond());
 		return Hour + ":" + Minute + ":" + Second;
 	}
-	
+
 	FString IntToString(const int& i, bool padded = true)
 	{
 		FString Ret = FString::FromInt(i);
@@ -105,8 +105,9 @@ private:
 		switch (Level)
 		{
 		case DEBUG:
-			FLinearColor color = FLinearColor::Gray;
-			return color.ToFColor(true);
+			//FLinearColor color = FLinearColor::Gray;
+			return FLinearColor::Gray.ToFColor(true);
+			//return color.ToFColor(true);
 		case WARNING:
 			return FColor::Yellow;
 		case ERROR:

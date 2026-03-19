@@ -34,6 +34,10 @@ void UEnvironmentManager::Deinitialize()
 void UEnvironmentManager::Tick(float DeltaTime)
 {
 	UpdateTime(DeltaTime);
+	 /*
+	 * If going the route of subscibing to minute/hour etc.
+	 * Do not need this chunk of code
+	 */
 	if (bTimeWasUpdated)
 	{
 		pMessanger->UpdateTime(CurrentTime.DayOfYear, CurrentTime.Year, CurrentTime.Month, 
@@ -72,7 +76,7 @@ void UEnvironmentManager::UpdateTime(float DeltaTime)
 	TimeDecay -= DeltaTime;
 	if (TimeDecay <= 0.0f)
 	{
-		TimeDecay += MinuteLength;
+		TimeDecay = MinuteLength;
 		AdvanceMinute();
 	}
 }

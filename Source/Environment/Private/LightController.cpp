@@ -30,6 +30,52 @@ void ALightController::TimeChangedUpdate(int DayOfYear, int Year, int Month,
 	CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
 	UpdateFromNewTimeData();
 }
+void ALightController::DayOfYearChangedUpdate(int DayOfYear)
+{
+	CurrentTime.DayOfYear = DayOfYear;
+	UpdateTime();
+}
+
+void ALightController::YearChangedUpdate(int Year)
+{
+	CurrentTime.Year = Year;
+	UpdateTime();
+}
+
+void ALightController::MonthChangedUpdate(int Month)
+{
+	CurrentTime.Month = Month;
+	UpdateTime();
+}
+
+void ALightController::DayOfMonthChangedUpdate(int DayOfMonth)
+{
+	CurrentTime.DayOfMonth = DayOfMonth;
+	UpdateTime();
+}
+
+void ALightController::HourChangedUpdate(int Hour)
+{
+	CurrentTime.Hour = Hour;
+	UpdateTime();
+}
+
+void ALightController::MinuteChangedUpdate(int Minute)
+{
+	CurrentTime.Minute = Minute;
+	UpdateTime();
+}
+/*
+* We could have some sort of stack that keeps track of how many time we need to call this,
+* if once we hit the last needed call, then we can call this function at the very end 
+* (since all the CurrentTime data will be updated by the last broadcast)
+* 
+*/
+void ALightController::UpdateTime()
+{
+	CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
+	UpdateFromNewTimeData();
+}
 
 // Called when the game starts or when spawned
 void ALightController::BeginPlay()
@@ -40,6 +86,14 @@ void ALightController::BeginPlay()
 		if (UMessagingSubsystem* Messaging = UMessagingSubsystem::Get())
 		{
 			Messaging->OnTimeChanged.AddDynamic(this, &ALightController::TimeChangedUpdate);
+			// Another way to tick along the time
+			/*Messaging->OnDayOfYearChanged.AddDynamic(this, &ALightController::DayOfYearChangedUpdate);
+			Messaging->OnYearChanged.AddDynamic(this, &ALightController::YearChangedUpdate);
+			Messaging->OnMonthChanged.AddDynamic(this, &ALightController::MonthChangedUpdate);
+			Messaging->OnDayOfMonthChanged.AddDynamic(this, &ALightController::DayOfMonthChangedUpdate);
+			Messaging->OnHourChanged.AddDynamic(this, &ALightController::HourChangedUpdate);
+			Messaging->OnMinuteChanged.AddDynamic(this, &ALightController::MinuteChangedUpdate);*/
+			
 		}
 	}
 }

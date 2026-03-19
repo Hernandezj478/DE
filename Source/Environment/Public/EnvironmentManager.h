@@ -28,7 +28,6 @@ private:
 	bool bUseDayNightCycle = true;
 	
 	FTimeData CurrentTime;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,meta=(AllowPrivateAccess=true))
 	float DayLengthInMinutes = 5;
 	float TimeDecay = 0;
 	float MinuteLength = 0;
@@ -45,7 +44,6 @@ private:
 	void AdvanceMonth();
 	void AdvanceYear();
 	void SetDayOfYear();
-	UFUNCTION(BlueprintCallable,meta=(AllowPrivateAccess=true))
 	void CalculateDayLength();
 	void UpdateLighting();
 	void UpdateLightRotation();

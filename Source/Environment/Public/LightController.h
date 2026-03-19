@@ -18,9 +18,7 @@ public:
 	// Sets default values for this actor's properties
 	ALightController();
 
-	UFUNCTION()
-	void TimeChangedUpdate(int DayOfYear, int Year, int Month,
-		int DayOfMonth, int Hour, int Minute);
+
 		
 protected:
 	// Called when the game starts or when spawned
@@ -57,4 +55,25 @@ private:
 	void UpdateSunLight();
 	void UpdateSkyLight();
 	void UpdateMoonLight();
+
+	UFUNCTION()
+	void TimeChangedUpdate(int DayOfYear, int Year, int Month,
+		int DayOfMonth, int Hour, int Minute);
+	/*
+	* Another way to tick along the time
+	*/
+	UFUNCTION()
+	void DayOfYearChangedUpdate(int DayOfYear);
+	UFUNCTION()
+	void YearChangedUpdate(int Year);
+	UFUNCTION()
+	void MonthChangedUpdate(int Month);
+	UFUNCTION()
+	void DayOfMonthChangedUpdate(int DayOfMonth);
+	UFUNCTION()
+	void HourChangedUpdate(int Hour);
+	UFUNCTION()
+	void MinuteChangedUpdate(int Minute);
+
+	void UpdateTime();
 };
