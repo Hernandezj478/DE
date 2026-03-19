@@ -27,7 +27,9 @@ public class DEEditorTarget : TargetRules
 			"Interface", 
 			"UtilityFeatures", 
 			"MessageHandler", 
-			"Environment"
+			"Environment",
+			"Statline",
+			"CharacterMovement"
 		});
 	}
 }

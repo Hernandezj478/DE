@@ -6,10 +6,10 @@
 #include "Components/ActorComponent.h"
 #include "MovementStateComponent.generated.h"
 
-class UEventBus;
+class UMessagingSubsystem;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class CHARACTERS_API UMovementStateComponent : public UActorComponent
+class CHARACTERMOVEMENT_API UMovementStateComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
@@ -22,6 +22,10 @@ public:
 	bool RequestCrouch(const bool& bRequested);
 	float GetWalkSpeed() const;
 	
+	FORCEINLINE bool GetSprintState() const { return bIsSprinting; }
+	FORCEINLINE bool GetCrouchState() const { return bIsCrouching; }
+	FORCEINLINE bool GetFallState() const { return bIsFalling; }
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -30,6 +34,7 @@ protected:
 private:
 	
 	class UCharacterMovementComponent* MovementComponent; 
+	UMessagingSubsystem* pMessanger;
 
 	bool bSprintRequested = false;
 	bool bCrouchRequested = false;
@@ -37,7 +42,6 @@ private:
 	bool bIsFalling = false;
 	bool bIsCrouching = false;
 	bool bCanSprint = true;
-	
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
 	float WalkSpeed = 200.f;
@@ -53,7 +57,9 @@ private:
 	// Event handlers
 	void HandleExhaustionStart(AActor* Actor);
 	void HandleExhaustionEnd(AActor* Actor);
-	
+	void OnExhaustionChanged(bool IsExhausted);
+
+
 	UFUNCTION()
 	void OnMovementModeChanged(ACharacter* Character, EMovementMode NewMovementMode, uint8 PreviousCustomMode);
 	
