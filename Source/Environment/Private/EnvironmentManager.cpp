@@ -8,7 +8,6 @@
 void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	Collection.InitializeDependency(UMessagingSubsystem::StaticClass());
 	Logger::GetInstance()->AddMessage("UEnvironmentManager::Initialize", DEBUG);
 	if (UWorld* pWorld = GetWorld())
 	{
@@ -37,7 +36,8 @@ void UEnvironmentManager::Tick(float DeltaTime)
 	UpdateTime(DeltaTime);
 	if (bTimeWasUpdated)
 	{
-		pMessanger->UpdateTime(CurrentTime);
+		pMessanger->UpdateTime(CurrentTime.DayOfYear, CurrentTime.Year, CurrentTime.Month, 
+			CurrentTime.DayOfMonth, CurrentTime.Hour, CurrentTime.Minute);
 		bTimeWasUpdated = false;
 	}
 }
@@ -98,7 +98,7 @@ void UEnvironmentManager::AdvanceHour()
 		CurrentTime.Hour = 0;
 		AdvanceDay();
 	}
-	pMessanger->UpdateHourOfDay(CurrentTime.Hour);
+	pMessanger->UpdateHour(CurrentTime.Hour);
 }
 
 void UEnvironmentManager::AdvanceDay()
@@ -142,7 +142,7 @@ void UEnvironmentManager::AdvanceDay()
 			}
 			break;
 		}
-		if (CurrentTime.DayOfMonth > 28)
+		else if (CurrentTime.DayOfMonth > 28)
 		{
 			CurrentTime.DayOfMonth = 1;
 			AdvanceMonth();
@@ -151,6 +151,7 @@ void UEnvironmentManager::AdvanceDay()
 	default:
 		break;
 	}
+	pMessanger->UpdateDayOfMonth(CurrentTime.DayOfMonth);
 	pMessanger->UpdateDayOfYear(CurrentTime.DayOfYear);
 }
 
@@ -172,6 +173,7 @@ void UEnvironmentManager::AdvanceYear()
 	CurrentTime.Year++;
 	CurrentTime.DayOfYear = 1;
 	pMessanger->UpdateYear(CurrentTime.Year);
+	pMessanger->UpdateDayOfYear(CurrentTime.DayOfYear);
 }
 
 void UEnvironmentManager::SetDayOfYear()

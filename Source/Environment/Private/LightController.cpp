@@ -18,9 +18,15 @@ ALightController::ALightController()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-void ALightController::TimeChangedUpdate(FTimeData TimeData)
+void ALightController::TimeChangedUpdate(int DayOfYear, int Year, int Month, 
+	int DayOfMonth, int Hour, int Minute)
 {
-	CurrentTime = TimeData;
+	CurrentTime.DayOfYear = DayOfYear;
+	CurrentTime.Year = Year;
+	CurrentTime.Month = Month;
+	CurrentTime.DayOfMonth = DayOfMonth;
+	CurrentTime.Hour = Hour;
+	CurrentTime.Minute = Minute;
 	CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
 	UpdateFromNewTimeData();
 }

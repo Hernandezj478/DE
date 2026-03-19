@@ -19,7 +19,8 @@ public:
 	ALightController();
 
 	UFUNCTION()
-	void TimeChangedUpdate(FTimeData TimeData);
+	void TimeChangedUpdate(int DayOfYear, int Year, int Month,
+		int DayOfMonth, int Hour, int Minute);
 		
 protected:
 	// Called when the game starts or when spawned
