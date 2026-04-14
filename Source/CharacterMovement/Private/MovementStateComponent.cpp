@@ -5,6 +5,7 @@
 #include "MessagingSubsystem.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Logger.h"
 
 UMovementStateComponent::UMovementStateComponent()
 {
@@ -24,29 +25,24 @@ void UMovementStateComponent::BeginPlay()
 		MovementComponent = Char->GetCharacterMovement();
 		Char->MovementModeChangedDelegate.AddDynamic(this, &UMovementStateComponent::OnMovementModeChanged);
 	}
-	pMessanger->OnExhaustionChanged.AddUObject(this, &UMovementStateComponent::OnExhaustionChanged);
-	// TODO: Replace with message handler
-	/*if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnExhaustionStart.AddUObject(this, &UMovementStateComponent::HandleExhaustionStart);
-		Bus->OnExhaustionEnd.AddUObject(this, &UMovementStateComponent::HandleExhaustionEnd);
-	}*/
+	pMessanger->OnExhaustionChanged.AddDynamic(this, &UMovementStateComponent::OnExhaustionChanged);
 	ApplyWalkSpeed();
 }
 
 void UMovementStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	/*if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnExhaustionStart.RemoveAll(this);
-		Bus->OnExhaustionEnd.RemoveAll(this);
-	}*/
-	
+	pMessanger->OnExhaustionChanged.RemoveAll(this);
 	Super::EndPlay(EndPlayReason);
 }
 
 void UMovementStateComponent::EvaluateSprintState()
 {
+	double vel = MovementComponent->GetVelocityForRVOConsideration().Length();
+	if (vel == 0.0)
+	{
+		bIsSprinting = false;
+		return;
+	}
 	if (bSprintRequested && CanSprint())
 	{
 		SprintStart();
@@ -55,6 +51,7 @@ void UMovementStateComponent::EvaluateSprintState()
 	{
 		SprintEnd();
 	}
+	//UpdateSprintState(bSprintRequested && CanSprint());
 }
 
 void UMovementStateComponent::EvaluateCrouchState()
@@ -67,28 +64,7 @@ void UMovementStateComponent::EvaluateCrouchState()
 	{
 		CrouchEnd();
 	}
-}
-
-void UMovementStateComponent::HandleExhaustionStart(AActor* Actor)
-{
-	if (Actor != GetOwner())
-	{
-		return;
-	}
-	SprintEnd();
-	ApplyExhaustedSpeed();
-	bCanSprint = false;
-}
-
-void UMovementStateComponent::HandleExhaustionEnd(AActor* Actor)
-{
-	if (Actor != GetOwner())
-	{
-		return;
-	}
-	bCanSprint = true;
-	ApplyWalkSpeed();
-	EvaluateSprintState();
+	//UpdateCrouchState(bCrouchRequested && !bIsSprinting);
 }
 
 void UMovementStateComponent::OnExhaustionChanged(bool IsExhausted)
@@ -96,6 +72,7 @@ void UMovementStateComponent::OnExhaustionChanged(bool IsExhausted)
 	if (IsExhausted)
 	{
 		SprintEnd();
+		//UpdateSprintState(false);
 		ApplyExhaustedSpeed();
 		bCanSprint = false;
 		return;
@@ -133,13 +110,28 @@ void UMovementStateComponent::OnMovementModeChanged(ACharacter* Character, EMove
 	if (bIsFalling)
 	{
 		SprintEnd();
-		FallingStart();	
+		//UpdateSprintState(false);
+		FallingStart();
 	}
 	else
 	{
-		EvaluateSprintState();
 		FallingEnd();
+		EvaluateSprintState();
 	}
+}
+
+void UMovementStateComponent::UpdateSprintState(bool bSprint)
+{
+	bIsSprinting = bSprint;
+	bIsSprinting ? ApplySprintSpeed() : ApplyWalkSpeed();
+	pMessanger->UpdateSprint(bIsSprinting);
+}
+
+void UMovementStateComponent::UpdateCrouchState(bool bCrouch)
+{
+	bIsCrouching = bCrouch;
+	bIsCrouching ? ApplyCrouchSpeed() : ApplyWalkSpeed();
+	pMessanger->UpdateCrouch(bIsCrouching);
 }
 
 bool UMovementStateComponent::CanSprint() const
@@ -167,13 +159,10 @@ void UMovementStateComponent::SprintStart()
 	{
 		return;
 	}
+	
 	bIsSprinting = true;
 	ApplySprintSpeed();
-	// Might remove this call, for now we dont need this to communicate with statline to drain stamina
-	// if (UEventBus* Bus = UEventBus::Get())
-	// {
-	// 	Bus->OnSprintStart.Broadcast(GetOwner());
-	// }
+	pMessanger->UpdateSprint(bIsSprinting);
 }
 
 void UMovementStateComponent::SprintEnd()
@@ -184,10 +173,7 @@ void UMovementStateComponent::SprintEnd()
 	}
 	bIsSprinting = false;
 	ApplyWalkSpeed();
-	// if (UEventBus* Bus = UEventBus::Get())
-	// {
-	// 	Bus->OnSprintEnd.Broadcast(GetOwner());
-	// }
+	pMessanger->UpdateSprint(bIsSprinting);
 }
 
 void UMovementStateComponent::CrouchStart()
@@ -198,10 +184,7 @@ void UMovementStateComponent::CrouchStart()
 	}
 	bIsCrouching = true;
 	ApplyCrouchSpeed();
-	// if (UEventBus* Bus = UEventBus::Get())
-	// {
-	// 	Bus->OnCrouchStart.Broadcast(GetOwner());
-	// }
+	pMessanger->UpdateCrouch(bIsCrouching);
 }
 
 void UMovementStateComponent::CrouchEnd()
@@ -213,26 +196,17 @@ void UMovementStateComponent::CrouchEnd()
 	bIsCrouching = false;
 	ApplyWalkSpeed();
 	EvaluateSprintState();
-	// if (UEventBus* Bus = UEventBus::Get())
-	// {
-	// 	Bus->OnCrouchEnd.Broadcast(GetOwner());
-	// }
+	pMessanger->UpdateCrouch(bIsCrouching);
 }
 
 void UMovementStateComponent::FallingStart()
 {
-	/*if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnFallingStart.Broadcast(GetOwner());
-	}*/
+	pMessanger->UpdateFalling(true);
 }
 
 void UMovementStateComponent::FallingEnd()
 {
-	/*if (UEventBus* Bus = UEventBus::Get())
-	{
-		Bus->OnFallingEnd.Broadcast(GetOwner());
-	}*/
+	pMessanger->UpdateFalling(false);
 }
 
 float UMovementStateComponent::GetWalkSpeed() const

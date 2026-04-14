@@ -20,11 +20,10 @@ public class Characters : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "CoreData",
-                "Statline", 
-                "CoreSystems",
+                "Statline",
                 "Inventory",
                 "UtilityFeatures",
-                "CharacterMovement"
+                "MessageHandler"
             }
         );
     }

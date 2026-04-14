@@ -7,7 +7,7 @@ public class CharacterMovement: ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
                 {
-                    "Core"
+                    "Core",
                 }
             );
         PrivateDependencyModuleNames.AddRange(
@@ -15,7 +15,8 @@ public class CharacterMovement: ModuleRules
                 {
                     "CoreUObject",
                     "Engine",
-                    "MessageHandler"
+                    "MessageHandler",
+                    "UtilityFeatures",
                 }
             );
     }

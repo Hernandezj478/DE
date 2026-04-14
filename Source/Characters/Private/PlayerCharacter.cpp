@@ -10,12 +10,12 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "MovementStateComponent.h"
 #include "Logger.h"
 
 
 // Sets default values
-APlayerCharacter::APlayerCharacter()
+APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) : 
+	Super(ObjectInitializer)
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -26,15 +26,6 @@ APlayerCharacter::APlayerCharacter()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
-	
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
-	GetCharacterMovement()->JumpZVelocity = 700.0f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = MovementStateComponent->GetWalkSpeed();
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
-	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	
 	// Create camera boom, pulls in when collision detected
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -116,19 +107,6 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void APlayerCharacter::PlayerJumpStart()
-{
-	if (CanCharacterJump() && !GetMovementComponent()->IsFalling())
-	{
-		CharacterJump();
-	}
-}
-
-void APlayerCharacter::PlayerJumpEnd()
-{
-	StopJumping();
-}
-
 void APlayerCharacter::TogglePerspective()
 {
 	bInFirstPerson = !bInFirstPerson;
@@ -139,6 +117,7 @@ void APlayerCharacter::TogglePerspective()
 		bUseControllerRotationPitch = false;
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationRoll = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
 		GetMesh()->SetOwnerNoSee(false);
 		GetMesh()->SetCollisionProfileName(FName("Collision"));
 		FirstPersonMeshComponent->SetOnlyOwnerSee(false);
@@ -149,30 +128,23 @@ void APlayerCharacter::TogglePerspective()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->SetCollisionProfileName(FName("NoCollision"));
 	FirstPersonMeshComponent->SetOnlyOwnerSee(true);
 	return;
 }
 
-void APlayerCharacter::SprintStart()
+void APlayerCharacter::ToggleWalkRun()
 {
-	SetSprinting(true);
-}
-
-void APlayerCharacter::SprintEnd()
-{
-	SetSprinting(false);
-}
-
-void APlayerCharacter::CrouchStart()
-{
-	SetCrouch(true);
-}
-
-void APlayerCharacter::CrouchEnd()
-{
-	SetCrouch(false);
+	if (!bIsRunning)
+	{
+		Logger::GetInstance()->AddMessage("ToggleWalkRun - Run", DEBUG);
+		Run();
+		return;
+	}
+	Logger::GetInstance()->AddMessage("ToggleWalkRun - StopRun", DEBUG);
+	StopRun();
 }
 
 // Called every frame
@@ -187,15 +159,18 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &APlayerCharacter::PlayerJumpStart);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &APlayerCharacter::PlayerJumpEnd);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(ToggleCameraPerspective, ETriggerEvent::Completed, this, &APlayerCharacter::TogglePerspective);
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &APlayerCharacter::SprintStart);
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &APlayerCharacter::SprintEnd);
-		EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Started, this, &APlayerCharacter::CrouchStart);
-		EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Completed, this, &APlayerCharacter::CrouchEnd);
+		EnhancedInputComponent->BindAction(ToggleRun, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleWalkRun);
+
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &ACharacterBase::Crouch, false);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ACharacterBase::UnCrouch, false);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ACharacterBase::Sprint);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACharacterBase::StopSprint);
+		
 
 		// EnhancedInputComponent->BindAction(InteractionAction, ETriggerEvent::Completed, this, &APlayerCharacter::Interaction);
 		// EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Completed, this, &APlayerCharacter::Inventory);

@@ -35,7 +35,23 @@ private:
 	bool bTimeWasUpdated = true;
 	int CurrentTimeOfDay = 0;
 	
+	bool bUseCelsius = true;
+
+	UPROPERTY()
 	class UMessagingSubsystem* pMessanger;
+	UPROPERTY()
+	class ADEWorldSettings* pWorldSettings;
+	UPROPERTY()
+	class UCurveFloat* DailyTemperatureRange;
+	UPROPERTY()
+	class UCurveFloat* AnnualTemperatureRange;
+
+	const float TemperatureTickFrequency = 1.f;
+	float TemperatureTickDecay = 0.f;
+	bool bHasTemperatureData = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Environment|Temperature")
+	float CurrentTemperature = 70.f;
 
 	void UpdateTime(float DeltaTime);
 	void AdvanceMinute();
@@ -47,4 +63,8 @@ private:
 	void CalculateDayLength();
 	void UpdateLighting();
 	void UpdateLightRotation();
+
+	void UpdateTemperature(float DeltaTime);
+
+	float ConvertToCelsius(const float Fahrenheit);
 };

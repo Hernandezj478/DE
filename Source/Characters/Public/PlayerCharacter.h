@@ -19,7 +19,7 @@ class CHARACTERS_API APlayerCharacter : public ACharacterBase
 	GENERATED_BODY()
 public:
 	// Sets default values for this character's properties
-	APlayerCharacter();
+	APlayerCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -30,20 +30,15 @@ public:
 	FORCEINLINE UCameraComponent* GetThirdPersonCameraComponent() const {return ThirdPersonCamera;}
 	FORCEINLINE UCameraComponent* GetFirstPersonCameraComponent() const {return FirstPersonCamera;}
 	
-	
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
-	void PlayerJumpStart();
-	void PlayerJumpEnd();
 	void TogglePerspective();
-	void SprintStart();
-	void SprintEnd();
-	void CrouchStart();
-	void CrouchEnd();
+	void ToggleWalkRun();
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -89,11 +84,14 @@ private:
 	UInputAction* SprintAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* SneakAction;
+	UInputAction* CrouchAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ToggleCameraPerspective;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ToggleRun;
+
 #pragma endregion Input
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))

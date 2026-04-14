@@ -22,7 +22,23 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTemperatureChangedDelegate, float, 
 #pragma endregion
 
 #pragma region Stats
-DECLARE_MULTICAST_DELEGATE_OneParam(FExhaustionChangedDelegate, bool);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FExhaustionChangedDelegate, bool, NewExhaustion);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStarvationChangedDelegate, bool, NewStarvation);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDehydrationChangedDelegate, bool, NewDehydration);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLowBloodChangedDelegate, bool, NewLowBlood);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHealthChangedDelegate, float, NewHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaminaChangedDelegate, float, NewStamina);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSatiationChangedDelegate, float, NewSatiation);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHydrationChangedDelegate, float, NewHydration);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBloodChangedDelegate, float, NewBlood);
+#pragma endregion
+
+#pragma region Movement
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSprintChangedDelegate, bool, NewSprint);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrouchChangedDelegate, bool, NewCrouch);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FJumpChangedDelegate, bool, NewJump);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFallChangedDelegate, bool, NewFall);
 #pragma endregion
 
 UCLASS()
@@ -59,8 +75,39 @@ public:
 #pragma endregion
 
 #pragma region StatDelegates
-	//UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
 	FExhaustionChangedDelegate OnExhaustionChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FStarvationChangedDelegate OnStarvationChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FDehydrationChangedDelegate OnDehydrationChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FLowBloodChangedDelegate OnLowBloodChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FHealthChangedDelegate OnHealthChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FStaminaChangedDelegate OnStaminaChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FSatiationChangedDelegate OnSatiationChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FHydrationChangedDelegate OnHydrationChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Boradcast Message|Stat")
+	FBloodChangedDelegate OnBloodChanged;
+
+#pragma endregion
+
+#pragma region Movement
+	UPROPERTY(BlueprintAssignable, Category = "Broadcast Message|Movement")
+	FSprintChangedDelegate OnSprintChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Broadcast Message|Movement")
+	FCrouchChangedDelegate OnCrouchChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Broadcast Message|Movement")
+	FJumpChangedDelegate OnJumpChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Broadcast Message|Movement")
+	FFallChangedDelegate OnFallingChanged;
 #pragma endregion
 
 #pragma region TriggerFunctions
@@ -74,8 +121,18 @@ public:
 	
 	void UpdateTemperature(int NewTemperature);
 	
-
 	void UpdateExhustion(bool NewExhaustion);
+	void UpdateHealth(float NewHealth);
+	void UpdateStamina(float NewStamina);
+	void UpdateSatiation(float NewSatiation);
+	void UpdateHydration(float NewHydration);
+	void UpdateBlood(float NewBlood);
+
+
+	void UpdateSprint(bool NewSprint);
+	void UpdateCrouch(bool NewCrouch);
+	void UpdateJump(bool NewJump);
+	void UpdateFalling(bool NewFall);
 #pragma endregion
 
 	static UMessagingSubsystem* Get();

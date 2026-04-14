@@ -47,7 +47,18 @@ public:
 	{
 		return MaxValue;
 	}
-
+	float GetTickRate() const
+	{
+		return PerSecondTick;
+	}
+	bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
+	{
+		// Serialize current and max
+		Ar << CurrentValue;
+		Ar << MaxValue;
+		bOutSuccess = true;
+		return true;
+	}
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	float CurrentValue = 100;
@@ -55,4 +66,10 @@ private:
 	float MaxValue = 100;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	float PerSecondTick = 1;
+};
+
+template<>
+struct TStructOpsTypeTraits<FStat> : public TStructOpsTypeTraitsBase2<FStat>
+{
+	enum { WithNetSerializer = true };
 };

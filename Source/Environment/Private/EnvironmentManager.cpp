@@ -3,6 +3,7 @@
 
 #include "EnvironmentManager.h"
 #include "MessagingSubsystem.h"
+#include "DEWorldSettings.h"
 #include "Logger.h"
 
 void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
@@ -34,10 +35,10 @@ void UEnvironmentManager::Deinitialize()
 void UEnvironmentManager::Tick(float DeltaTime)
 {
 	UpdateTime(DeltaTime);
-	 /*
-	 * If going the route of subscibing to minute/hour etc.
-	 * Do not need this chunk of code
-	 */
+	if (bHasTemperatureData)
+	{
+		UpdateTemperature(DeltaTime);
+	}
 	if (bTimeWasUpdated)
 	{
 		pMessanger->UpdateTime(CurrentTime.DayOfYear, CurrentTime.Year, CurrentTime.Month, 
@@ -69,6 +70,23 @@ void UEnvironmentManager::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	CalculateDayLength();
+	pWorldSettings = Cast<ADEWorldSettings>(GetWorld()->GetWorldSettings());
+	if (pWorldSettings)
+	{
+		if (!pWorldSettings->DailyTemperatureRange.IsNull())
+		{
+			DailyTemperatureRange = pWorldSettings->DailyTemperatureRange.LoadSynchronous();
+		}
+		if (!pWorldSettings->AnnualTemperatureRange.IsNull())
+		{
+			AnnualTemperatureRange = pWorldSettings->AnnualTemperatureRange.LoadSynchronous();
+		}
+	}
+	if (!IsValid(DailyTemperatureRange) && !IsValid(AnnualTemperatureRange))
+	{
+		Logger::GetInstance()->AddMessage("UEnvironmentManager::OnWorldBeginPlay - Daily/Annual Temperature Range not valid", DEBUG);
+		bHasTemperatureData = false;
+	}
 }
 
 void UEnvironmentManager::UpdateTime(float DeltaTime)
@@ -76,7 +94,7 @@ void UEnvironmentManager::UpdateTime(float DeltaTime)
 	TimeDecay -= DeltaTime;
 	if (TimeDecay <= 0.0f)
 	{
-		TimeDecay = MinuteLength;
+		TimeDecay += MinuteLength;
 		AdvanceMinute();
 	}
 }
@@ -224,4 +242,42 @@ void UEnvironmentManager::UpdateLighting()
 
 void UEnvironmentManager::UpdateLightRotation()
 {
+}
+
+void UEnvironmentManager::UpdateTemperature(float DeltaTime)
+{
+	TemperatureTickDecay -= DeltaTime;
+	if (TemperatureTickDecay > 0.f)
+	{
+		return;
+	}
+	TemperatureTickDecay += TemperatureTickFrequency;
+	// Temperature logic
+	if (IsValid(DailyTemperatureRange) && IsValid(AnnualTemperatureRange))
+	{
+		CurrentTemperature = DailyTemperatureRange->GetFloatValue(CurrentTime.GetTimeOfDay());
+		CurrentTemperature += AnnualTemperatureRange->GetFloatValue(CurrentTime.DayOfYear);
+	}
+	else if (IsValid(DailyTemperatureRange))
+	{
+		CurrentTemperature = DailyTemperatureRange->GetFloatValue(CurrentTime.GetTimeOfDay());
+	}
+	else if (IsValid(AnnualTemperatureRange))
+	{
+		CurrentTemperature = AnnualTemperatureRange->GetFloatValue(CurrentTime.DayOfYear);
+	}
+	else
+	{
+		Logger::GetInstance()->AddMessage("UEnvironmentManager::UpdateTemperature - No valid temperature curve found", WARNING);
+	}
+	if (bUseCelsius)
+	{
+		CurrentTemperature = ConvertToCelsius(CurrentTemperature);
+	}
+	pMessanger->UpdateTemperature(CurrentTemperature);
+}
+
+float UEnvironmentManager::ConvertToCelsius(const float Fahrenheit)
+{
+	return (5.f / 9.f) * (Fahrenheit - 32);
 }

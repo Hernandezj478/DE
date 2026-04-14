@@ -50,6 +50,51 @@ void UMessagingSubsystem::UpdateExhustion(bool NewExhaustion)
 	OnExhaustionChanged.Broadcast(NewExhaustion);
 }
 
+void UMessagingSubsystem::UpdateHealth(float NewHealth)
+{
+	OnHealthChanged.Broadcast(NewHealth);
+}
+
+void UMessagingSubsystem::UpdateStamina(float NewStamina)
+{
+	OnStaminaChanged.Broadcast(NewStamina);
+}
+
+void UMessagingSubsystem::UpdateSatiation(float NewSatiation)
+{
+	OnSatiationChanged.Broadcast(NewSatiation);
+}
+
+void UMessagingSubsystem::UpdateHydration(float NewHydration)
+{
+	OnHydrationChanged.Broadcast(NewHydration);
+}
+
+void UMessagingSubsystem::UpdateBlood(float NewBlood)
+{
+	OnBloodChanged.Broadcast(NewBlood);
+}
+
+void UMessagingSubsystem::UpdateSprint(bool NewSprint)
+{
+	OnSprintChanged.Broadcast(NewSprint);
+}
+
+void UMessagingSubsystem::UpdateCrouch(bool NewCrouch)
+{
+	OnCrouchChanged.Broadcast(NewCrouch);
+}
+
+void UMessagingSubsystem::UpdateJump(bool NewJump)
+{
+	OnJumpChanged.Broadcast(NewJump);
+}
+
+void UMessagingSubsystem::UpdateFalling(bool NewFall)
+{
+	OnFallingChanged.Broadcast(NewFall);
+}
+
 UMessagingSubsystem* UMessagingSubsystem::Get()
 {
 	if (!GEngine)

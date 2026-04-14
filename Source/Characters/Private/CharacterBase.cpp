@@ -2,21 +2,22 @@
 
 
 #include "CharacterBase.h"
-#include "MovementStateComponent.h"
-#include "StatComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/StatComponent.h"
 #include "InventoryComponent.h"
 #include "Logger.h"
+#include "Net/UnrealNetwork.h"
+
 
 // Sets default values
-ACharacterBase::ACharacterBase()
+ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer) : 
+	Super(ObjectInitializer.SetDefaultSubobjectClass<UDECharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
 	// Enable replication
-	bReplicates = true;
-	bAlwaysRelevant = true;
+	SetReplicates(true);
+	//bReplicates = true;
+	//bAlwaysRelevant = true;
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetMesh()->SetIsReplicated(true);
 	Statline = CreateDefaultSubobject<UStatComponent>(TEXT("Statline"));
@@ -24,7 +25,6 @@ ACharacterBase::ACharacterBase()
 	{
 		Logger::GetInstance()->AddMessage("Statline has not been created/initialized", ERROR);
 	}
-	MovementStateComponent = CreateDefaultSubobject<UMovementStateComponent>(TEXT("MovementStateComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -33,25 +33,18 @@ void ACharacterBase::BeginPlay()
 	Super::BeginPlay();
 }
 
-bool ACharacterBase::CanCharacterJump() const
+bool ACharacterBase::CanJumpInternal_Implementation() const
 {
-	return Statline->CanJump();
+	return Super::CanJumpInternal_Implementation() && (Statline && Statline->CanJump()) ;
 }
 
-void ACharacterBase::CharacterJump()
+void ACharacterBase::OnJumped_Implementation()
 {
-	Statline->ConsumeJumpStamina();
-	Jump();
-}
-
-void ACharacterBase::SetSprinting(const bool& bSprinting)
-{
-	Statline->SetSprint(MovementStateComponent->RequestSprint(bSprinting));
-}
-
-void ACharacterBase::SetCrouch(const bool& bCrouch)
-{
-	Statline->SetCrouch(MovementStateComponent->RequestCrouch(bCrouch));
+	Super::OnJumped_Implementation();
+	if (Statline)
+	{
+		Statline->ConsumeJumpStamina();
+	}
 }
 
 // Called every frame
@@ -66,8 +59,127 @@ void ACharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
+void ACharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ACharacterBase, bIsSprinting);
+	DOREPLIFETIME(ACharacterBase, bIsRunning);
+}
+
 UActorComponent* ACharacterBase::GetCharacterInventory() const
 {
 	return InventoryComponent;
 }
 
+void ACharacterBase::OnRep_IsSprinting()
+{
+	if (UDECharacterMovementComponent* characterMovement = GetCharacterMovement<UDECharacterMovementComponent>())
+	{
+		if (IsSprinting())
+		{
+			characterMovement->bWantsToSprint = true;
+			characterMovement->Sprint(true);
+		}
+		else
+		{
+			characterMovement->bWantsToSprint = false;
+			characterMovement->StopSprint(true);
+		}
+		characterMovement->bNetworkUpdateReceived = true;
+	}
+}
+
+void ACharacterBase::OnRep_IsRunning()
+{
+	if (UDECharacterMovementComponent* characterMovement = GetCharacterMovement<UDECharacterMovementComponent>())
+	{
+		if (IsRunning())
+		{
+			characterMovement->bWantsToRun = true;
+			characterMovement->Run(true);
+		}
+		else
+		{
+			characterMovement->bWantsToRun = false;
+			characterMovement->StopRun(true);
+		}
+		characterMovement->bNetworkUpdateReceived = true;
+	}
+}
+
+void ACharacterBase::Crouch(bool bClientSimulation)
+{
+	Super::Crouch(bClientSimulation);
+}
+
+void ACharacterBase::UnCrouch(bool bClientSimulation)
+{
+	Super::UnCrouch(bClientSimulation);
+}
+
+void ACharacterBase::Run()
+{
+	if (GetCharacterMovement())
+	{
+		if (CanRun())
+		{
+			GetCharacterMovement<UDECharacterMovementComponent>()->bWantsToRun = true;
+		}
+	}
+}
+
+void ACharacterBase::StopRun()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement<UDECharacterMovementComponent>()->bWantsToRun = false;
+	}
+}
+
+void ACharacterBase::Sprint()
+{
+	if (GetCharacterMovement())
+	{
+		if (CanSprint())
+		{
+			GetCharacterMovement<UDECharacterMovementComponent>()->bWantsToSprint = true;
+		}
+	}
+}
+
+void ACharacterBase::StopSprint()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement<UDECharacterMovementComponent>()->bWantsToSprint = false;
+	}
+}
+
+void ACharacterBase::SetIsSprinting(bool IsSprinting)
+{
+	bIsSprinting = IsSprinting;
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		OnRep_IsSprinting();
+	}
+}
+
+void ACharacterBase::SetIsRunning(bool IsRunning)
+{
+	bIsRunning = IsRunning;
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		OnRep_IsRunning();
+	}
+}
+
+bool ACharacterBase::CanSprint()
+{
+	return Statline && Statline->CanSprint();
+}
+
+bool ACharacterBase::CanRun()
+{
+	// Running does not drain stamina, but will cause thirst/hunger to drain faster
+	return Statline && Statline->CanRun();
+}

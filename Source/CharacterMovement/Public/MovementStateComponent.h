@@ -32,8 +32,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 private:
-	
-	class UCharacterMovementComponent* MovementComponent; 
+	class UCharacterMovementComponent* MovementComponent;
 	UMessagingSubsystem* pMessanger;
 
 	bool bSprintRequested = false;
@@ -55,14 +54,16 @@ private:
 	void EvaluateSprintState();
 	void EvaluateCrouchState();
 	// Event handlers
-	void HandleExhaustionStart(AActor* Actor);
-	void HandleExhaustionEnd(AActor* Actor);
-	void OnExhaustionChanged(bool IsExhausted);
 
+	UFUNCTION()
+	void OnExhaustionChanged(bool IsExhausted);
 
 	UFUNCTION()
 	void OnMovementModeChanged(ACharacter* Character, EMovementMode NewMovementMode, uint8 PreviousCustomMode);
 	
+	void UpdateSprintState(bool bSprint);
+	void UpdateCrouchState(bool bCrouch);
+
 	void SprintStart();
 	void SprintEnd();
 	void CrouchStart();
