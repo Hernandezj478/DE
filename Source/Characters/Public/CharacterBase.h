@@ -17,9 +17,9 @@ class CHARACTERS_API ACharacterBase : public ACharacter
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadOnly, replicatedUsing = OnRep_IsSprinting, Category = Character)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsSprinting, Category = Character)
 	bool bIsSprinting = false;
-	UPROPERTY(BlueprintReadOnly, replicatedUsing = OnRep_IsRunning, Category = Character)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsRunning, Category = Character)
 	bool bIsRunning = false;
 	UPROPERTY(BlueprintReadOnly)
 	float CharacterMass = 80.f; // in kG
@@ -42,6 +42,10 @@ public:
 	virtual void OnRep_IsSprinting();
 	UFUNCTION()
 	virtual void OnRep_IsRunning();
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_DebugAdjustStat(const EStatTypes Stat, float Amount);
+	void Server_DebugAdjustStat_Implementation(const EStatTypes Stat, float Amount);
 
 	virtual void Crouch(bool bClientSimulation = false) override;
 	virtual void UnCrouch(bool bClientSimulation = false) override;

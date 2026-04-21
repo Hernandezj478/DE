@@ -28,8 +28,7 @@ public class DETarget : TargetRules
 			"UtilityFeatures", 
 			"MessageHandler", 
 			"Environment",
-			"Statline",
-            "CharacterMovement"
+			"VoxelEngine"
         });
 	}
 }

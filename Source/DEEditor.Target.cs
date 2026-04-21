@@ -28,8 +28,7 @@ public class DEEditorTarget : TargetRules
 			"UtilityFeatures", 
 			"MessageHandler", 
 			"Environment",
-			"Statline",
-			"CharacterMovement"
+			"VoxelEngine"
 		});
 	}
 }

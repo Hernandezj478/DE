@@ -105,7 +105,10 @@ public:
 	void StopRun(bool bClientSimulation = false);
 protected:
 	FDECharacterNetworkMoveDataContainer MoveDataContainer;
-
+	
+	UPROPERTY(Transient, DuplicateTransient)
+	TObjectPtr<class ACharacterBase> CustomCharacterOwner;
+	virtual void BeginPlay() override;
 	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
 	virtual void InitializeComponent() override;
 	virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
@@ -121,7 +124,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = true))
 	float ExhaustedSpeed = 80.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowedPrivateAccess = true))
-	float JumpVelocity = 400.f;
+	float JumpVelocity = 200.f;
 	/* Momentum & Inertia */
 	// How fast character reaches max speed from standstill (per movement state)
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta=(AllowedPrivateAccess=true))

@@ -73,7 +73,27 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void APlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	SetupPlayerInput();
+}
+
+void APlayerCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	SetupPlayerInput();
+}
+
+void APlayerCharacter::SetupPlayerInput()
+{
 	// Get the player controller for this character
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -109,6 +129,10 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::TogglePerspective()
 {
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
 	bInFirstPerson = !bInFirstPerson;
 	if (!bInFirstPerson)
 	{
@@ -139,11 +163,9 @@ void APlayerCharacter::ToggleWalkRun()
 {
 	if (!bIsRunning)
 	{
-		Logger::GetInstance()->AddMessage("ToggleWalkRun - Run", DEBUG);
 		Run();
 		return;
 	}
-	Logger::GetInstance()->AddMessage("ToggleWalkRun - StopRun", DEBUG);
 	StopRun();
 }
 

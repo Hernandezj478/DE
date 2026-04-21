@@ -50,6 +50,10 @@ public:
 		{
 			GEngine->AddOnScreenDebugMessage(Key, 2.f, ErrorLevelAsColor(Level), Message);
 		}
+		if (Level == CRITICAL)
+		{
+			check(false);
+		}
 #endif
 	}
 private:

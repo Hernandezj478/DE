@@ -22,7 +22,7 @@ public:
 	{
 		CurrentValue = FMath::Clamp(CurrentValue + (PerSecondTick * DeltaTime), 0, MaxValue);
 	}
-	
+
 	// Amount can be positive or negative, depending on how we want these to behave
 	void Adjust(const float& Amount)
 	{
@@ -39,6 +39,15 @@ public:
 		PerSecondTick = NewTick;
 	}
 	
+	void SetMaxValue(float NewMax)
+	{
+		CurrentValue = NewMax * (CurrentValue / MaxValue);	
+		MaxValue = NewMax;
+	}
+	void SetCurrentValue(float NewValue)
+	{
+		CurrentValue = NewValue;
+	}
 	float GetCurrentValue() const
 	{
 		return CurrentValue;

@@ -34,7 +34,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_Controller() override;
+	virtual void SetupPlayerInput();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void TogglePerspective();

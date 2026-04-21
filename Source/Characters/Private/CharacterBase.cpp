@@ -41,7 +41,7 @@ bool ACharacterBase::CanJumpInternal_Implementation() const
 void ACharacterBase::OnJumped_Implementation()
 {
 	Super::OnJumped_Implementation();
-	if (Statline)
+	if (Statline && HasAuthority())
 	{
 		Statline->ConsumeJumpStamina();
 	}
@@ -107,6 +107,14 @@ void ACharacterBase::OnRep_IsRunning()
 	}
 }
 
+void ACharacterBase::Server_DebugAdjustStat_Implementation(const EStatTypes Stat, float Amount)
+{
+	if (Statline)
+	{
+		Statline->AdjustStat(Stat, Amount);
+	}
+}
+
 void ACharacterBase::Crouch(bool bClientSimulation)
 {
 	Super::Crouch(bClientSimulation);
@@ -157,20 +165,22 @@ void ACharacterBase::StopSprint()
 
 void ACharacterBase::SetIsSprinting(bool IsSprinting)
 {
-	bIsSprinting = IsSprinting;
-	if (GetLocalRole() == ROLE_Authority)
+	if(bIsSprinting == IsSprinting)
 	{
-		OnRep_IsSprinting();
+		return;
 	}
+	bIsSprinting = IsSprinting;
+	OnRep_IsSprinting();
 }
 
 void ACharacterBase::SetIsRunning(bool IsRunning)
 {
-	bIsRunning = IsRunning;
-	if (GetLocalRole() == ROLE_Authority)
+	if (bIsRunning == IsRunning)
 	{
-		OnRep_IsRunning();
+		return;
 	}
+	bIsRunning = IsRunning;
+	OnRep_IsRunning();
 }
 
 bool ACharacterBase::CanSprint()

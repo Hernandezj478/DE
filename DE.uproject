@@ -1,239 +1,231 @@
 {
-  "FileVersion": 3,
-  "EngineAssociation": "5.7",
-  "Category": "",
-  "Description": "",
-  "Modules": [
-    {
-      "Name": "DE",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "Characters",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "CoreData",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "CoreSystems",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "Items",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "Inventory",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "Interface",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "Gameplay",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "UtilityFeatures",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "MessageHandler",
-      "Type": "Runtime",
-      "LoadingPhase": "EarliestPossible"
-    },
-    {
-      "Name": "Environment",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "Statline",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "CharacterMovement",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "VoxelModule",
-      "Type": "Runtime",
-      "LoadingPhase": "Default"
-    }
-  ],
-  "Plugins": [
-    {
-      "Name": "ModelingToolsEditorMode",
-      "Enabled": true
-    },
-    {
-      "Name": "StateTree",
-      "Enabled": true
-    },
-    {
-      "Name": "GameplayStateTree",
-      "Enabled": true
-    },
-    {
-      "Name": "Paper2D",
-      "Enabled": false
-    },
-    {
-      "Name": "OnlineSubsystemGooglePlay",
-      "Enabled": false,
-      "SupportedTargetPlatforms": [
-        "Android"
-      ]
-    },
-    {
-      "Name": "AndroidPermission",
-      "Enabled": false
-    },
-    {
-      "Name": "AndroidFileServer",
-      "Enabled": false
-    },
-    {
-      "Name": "GooglePAD",
-      "Enabled": false
-    },
-    {
-      "Name": "IOSDeviceProfileSelector",
-      "Enabled": false
-    },
-    {
-      "Name": "LinuxDeviceProfileSelector",
-      "Enabled": false
-    },
-    {
-      "Name": "AndroidDeviceProfileSelector",
-      "Enabled": false
-    },
-    {
-      "Name": "ExampleDeviceProfileSelector",
-      "Enabled": false
-    },
-    {
-      "Name": "UObjectPlugin",
-      "Enabled": false
-    },
-    {
-      "Name": "AppleImageUtils",
-      "Enabled": false
-    },
-    {
-      "Name": "AndroidMedia",
-      "Enabled": false
-    },
-    {
-      "Name": "AndroidMoviePlayer",
-      "Enabled": false
-    },
-    {
-      "Name": "AppleMoviePlayer",
-      "Enabled": false
-    },
-    {
-      "Name": "AvfMedia",
-      "Enabled": false
-    },
-    {
-      "Name": "WebMMoviePlayer",
-      "Enabled": false
-    },
-    {
-      "Name": "MacGraphicsSwitching",
-      "Enabled": false
-    },
-    {
-      "Name": "LocationServicesBPLibrary",
-      "Enabled": false
-    },
-    {
-      "Name": "MobilePatchingUtils",
-      "Enabled": false
-    },
-    {
-      "Name": "OnlineSubsystemIOS",
-      "Enabled": false,
-      "SupportedTargetPlatforms": [
-        "IOS",
-        "TVOS"
-      ]
-    },
-    {
-      "Name": "SocketSubsystemSteamIP",
-      "Enabled": true
-    },
-    {
-      "Name": "CLionSourceCodeAccess",
-      "Enabled": false
-    },
-    {
-      "Name": "NullSourceCodeAccess",
-      "Enabled": false
-    },
-    {
-      "Name": "XCodeSourceCodeAccess",
-      "Enabled": false,
-      "SupportedTargetPlatforms": [
-        "Mac"
-      ]
-    },
-    {
-      "Name": "VisualStudioCodeSourceCodeAccess",
-      "Enabled": false
-    },
-    {
-      "Name": "KDevelopSourceCodeAccess",
-      "Enabled": false
-    },
-    {
-      "Name": "CodeLiteSourceCodeAccess",
-      "Enabled": false
-    },
-    {
-      "Name": "SubversionSourceControl",
-      "Enabled": false
-    },
-    {
-      "Name": "PlasticSourceControl",
-      "Enabled": false
-    },
-    {
-      "Name": "PerforceSourceControl",
-      "Enabled": false
-    },
-    {
-      "Name": "N10XSourceCodeAccess",
-      "Enabled": false
-    },
-    {
-      "Name": "VisualStudioTools",
-      "Enabled": true,
-      "SupportedTargetPlatforms": [
-        "Win64"
-      ]
-    }
-  ],
-  "TargetPlatforms": [
-    "Windows"
-  ],
-  "AdditionalRootDirectories": [],
-  "AdditionalPluginDirectories": [],
-  "EpicSampleNameHash": ""
+	"FileVersion": 3,
+	"EngineAssociation": "5.7",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "DE",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Characters",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CoreData",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CoreSystems",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Items",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Inventory",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Interface",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "Gameplay",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "UtilityFeatures",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "MessageHandler",
+			"Type": "Runtime",
+			"LoadingPhase": "EarliestPossible"
+		},
+		{
+			"Name": "Environment",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "VoxelEngine",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ProceduralMeshComponent",
+			"Enabled": true
+		},
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true
+		},
+		{
+			"Name": "StateTree",
+			"Enabled": true
+		},
+		{
+			"Name": "GameplayStateTree",
+			"Enabled": true
+		},
+		{
+			"Name": "Paper2D",
+			"Enabled": false
+		},
+		{
+			"Name": "OnlineSubsystemGooglePlay",
+			"Enabled": false,
+			"SupportedTargetPlatforms": [
+				"Android"
+			]
+		},
+		{
+			"Name": "AndroidPermission",
+			"Enabled": false
+		},
+		{
+			"Name": "AndroidFileServer",
+			"Enabled": false
+		},
+		{
+			"Name": "GooglePAD",
+			"Enabled": false
+		},
+		{
+			"Name": "IOSDeviceProfileSelector",
+			"Enabled": false
+		},
+		{
+			"Name": "LinuxDeviceProfileSelector",
+			"Enabled": false
+		},
+		{
+			"Name": "AndroidDeviceProfileSelector",
+			"Enabled": false
+		},
+		{
+			"Name": "ExampleDeviceProfileSelector",
+			"Enabled": false
+		},
+		{
+			"Name": "UObjectPlugin",
+			"Enabled": false
+		},
+		{
+			"Name": "AppleImageUtils",
+			"Enabled": false
+		},
+		{
+			"Name": "AndroidMedia",
+			"Enabled": false
+		},
+		{
+			"Name": "AndroidMoviePlayer",
+			"Enabled": false
+		},
+		{
+			"Name": "AppleMoviePlayer",
+			"Enabled": false
+		},
+		{
+			"Name": "AvfMedia",
+			"Enabled": false
+		},
+		{
+			"Name": "WebMMoviePlayer",
+			"Enabled": false
+		},
+		{
+			"Name": "MacGraphicsSwitching",
+			"Enabled": false
+		},
+		{
+			"Name": "LocationServicesBPLibrary",
+			"Enabled": false
+		},
+		{
+			"Name": "MobilePatchingUtils",
+			"Enabled": false
+		},
+		{
+			"Name": "OnlineSubsystemIOS",
+			"Enabled": false,
+			"SupportedTargetPlatforms": [
+				"IOS",
+				"TVOS"
+			]
+		},
+		{
+			"Name": "SocketSubsystemSteamIP",
+			"Enabled": true
+		},
+		{
+			"Name": "CLionSourceCodeAccess",
+			"Enabled": false
+		},
+		{
+			"Name": "NullSourceCodeAccess",
+			"Enabled": false
+		},
+		{
+			"Name": "XCodeSourceCodeAccess",
+			"Enabled": false,
+			"SupportedTargetPlatforms": [
+				"Mac"
+			]
+		},
+		{
+			"Name": "VisualStudioCodeSourceCodeAccess",
+			"Enabled": false
+		},
+		{
+			"Name": "KDevelopSourceCodeAccess",
+			"Enabled": false
+		},
+		{
+			"Name": "CodeLiteSourceCodeAccess",
+			"Enabled": false
+		},
+		{
+			"Name": "SubversionSourceControl",
+			"Enabled": false
+		},
+		{
+			"Name": "PlasticSourceControl",
+			"Enabled": false
+		},
+		{
+			"Name": "PerforceSourceControl",
+			"Enabled": false
+		},
+		{
+			"Name": "N10XSourceCodeAccess",
+			"Enabled": false
+		},
+		{
+			"Name": "VisualStudioTools",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			],
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/362651520df94e4fa65492dbcba44ae2"
+		}
+	],
+	"TargetPlatforms": [
+		"Windows"
+	]
 }

@@ -41,7 +41,7 @@ FDECharacterNetworkMoveDataContainer::FDECharacterNetworkMoveDataContainer()
 {
 	NewMoveData		= &MoveData[0];
 	PendingMoveData = &MoveData[1];
-	OldMoveData		= &MoveData[3];
+	OldMoveData		= &MoveData[2];
 }
 // =========================================================
 // FDESavedMove
@@ -209,7 +209,7 @@ void UDECharacterMovementComponent::UpdateCharacterStateBeforeMovement(float Del
 {
 	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
 
-	// Proxies get replicated sprint state
+	// Proxies get replicated Sprint/Run State
 	if (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)
 	{
 		// Check for change in sprint. Players toggle sprint by changing bWantsToSprint
@@ -305,13 +305,13 @@ void UDECharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float R
 
 bool UDECharacterMovementComponent::CanSprintInCurrentState()
 {
-	if (!IsMovingOnGround() || !UpdatedComponent || UpdatedComponent->IsSimulatingPhysics())
+	if (!IsMovingOnGround() || !UpdatedComponent || UpdatedComponent->IsSimulatingPhysics() || GetCurrentAcceleration().IsNearlyZero())
 	{
 		return false;
 	}
-	if (ACharacterBase* Owner = Cast<ACharacterBase>(CharacterOwner))
+	if (CustomCharacterOwner)
 	{
-		return Owner->CanSprint();
+		return CustomCharacterOwner->CanSprint();
 	}
 	return false;
 }
@@ -331,12 +331,12 @@ bool UDECharacterMovementComponent::CanRunInCurrentState()
 
 bool UDECharacterMovementComponent::IsSprinting()
 {
-	return CharacterOwner && Cast<ACharacterBase>(CharacterOwner)->IsSprinting();
+	return CustomCharacterOwner && CustomCharacterOwner->IsSprinting();
 }
 
 bool UDECharacterMovementComponent::IsRunning()
 {
-	return CharacterOwner && Cast<ACharacterBase>(CharacterOwner)->IsRunning();
+	return CustomCharacterOwner && CustomCharacterOwner->IsRunning();
 }
 
 void UDECharacterMovementComponent::Sprint(bool bClientSimulation)
@@ -345,7 +345,30 @@ void UDECharacterMovementComponent::Sprint(bool bClientSimulation)
 	{
 		return;
 	}
-	Cast<ACharacterBase>(CharacterOwner)->SetIsSprinting(true);
+	if (!bClientSimulation && !CanSprintInCurrentState())
+	{
+		return;
+	}
+	// See if we are already sprinting
+	if (CustomCharacterOwner->IsSprinting() == IsSprinting())
+	{
+		if(!bClientSimulation)
+		{
+			CustomCharacterOwner->SetIsSprinting(true);
+		}
+		return;
+	}
+	// TODO: We might not need this, we might not want to set the sprint state to default on simulated proxy
+	if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
+	{
+		// Restore sprint to default sprint
+		ACharacterBase* DefaultCharacter = CharacterOwner->GetClass()->GetDefaultObject<ACharacterBase>();
+		CustomCharacterOwner->SetIsSprinting(DefaultCharacter->IsSprinting());
+	}
+	if (!bClientSimulation)
+	{
+		CustomCharacterOwner->SetIsSprinting(true);
+	}
 }
 
 void UDECharacterMovementComponent::StopSprint(bool bClientSimulation)
@@ -354,7 +377,10 @@ void UDECharacterMovementComponent::StopSprint(bool bClientSimulation)
 	{
 		return;
 	}
-	Cast<ACharacterBase>(CharacterOwner)->SetIsSprinting(false);
+	if (CustomCharacterOwner)
+	{
+		CustomCharacterOwner->SetIsSprinting(false);
+	}
 }
 
 void UDECharacterMovementComponent::Run(bool bClientSimulation)
@@ -363,7 +389,20 @@ void UDECharacterMovementComponent::Run(bool bClientSimulation)
 	{
 		return;
 	}
-	Cast<ACharacterBase>(CharacterOwner)->SetIsRunning(true);
+	if (!bClientSimulation && !CanRunInCurrentState())
+	{
+		return;
+	}
+	// Check if we are already running
+	if (CustomCharacterOwner->IsRunning() == IsRunning())
+	{
+		if(!bClientSimulation)
+		{
+			CustomCharacterOwner->SetIsRunning(true);
+		}
+		return;
+	}
+	
 }
 
 void UDECharacterMovementComponent::StopRun(bool bClientSimulation)
@@ -372,7 +411,27 @@ void UDECharacterMovementComponent::StopRun(bool bClientSimulation)
 	{
 		return;
 	}
-	Cast<ACharacterBase>(CharacterOwner)->SetIsRunning(false);
+	if (ACharacterBase* Owner = Cast<ACharacterBase>(CharacterOwner))
+	{
+		Owner->SetIsRunning(false);
+	}
+}
+
+void UDECharacterMovementComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!HasBegunPlay())
+	{
+		return;
+	}
+	CustomCharacterOwner = Cast<ACharacterBase>(CharacterOwner);
+#if !UE_BUILD_SHIPPING
+	if (!CustomCharacterOwner)
+	{
+		Logger::GetInstance()->AddMessage("DECharacterMovementComponent requires ACharacterBase owner!", CRITICAL);
+	}
+#endif
 }
 
 void UDECharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
@@ -385,7 +444,6 @@ void UDECharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 void UDECharacterMovementComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
-
 }
 
 FNetworkPredictionData_Client* UDECharacterMovementComponent::GetPredictionData_Client() const

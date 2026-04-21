@@ -34,6 +34,13 @@ void UEnvironmentManager::Deinitialize()
 
 void UEnvironmentManager::Tick(float DeltaTime)
 {
+	// Server world drives environment state
+	// Clients receive replicated data
+	UWorld* World = GetWorld();
+	if (!World || World->GetNetMode() == NM_Client)
+	{
+		return;
+	}
 	UpdateTime(DeltaTime);
 	if (bHasTemperatureData)
 	{
@@ -68,7 +75,12 @@ TStatId UEnvironmentManager::GetStatId() const
 
 void UEnvironmentManager::OnWorldBeginPlay(UWorld& InWorld)
 {
+	// Clients dont need to load curves, they receive replicated state from server
 	Super::OnWorldBeginPlay(InWorld);
+	if (InWorld.GetNetMode() == NM_Client)
+	{
+		return;
+	}
 	CalculateDayLength();
 	pWorldSettings = Cast<ADEWorldSettings>(GetWorld()->GetWorldSettings());
 	if (pWorldSettings)
