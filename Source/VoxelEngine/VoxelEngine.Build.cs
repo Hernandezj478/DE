@@ -9,7 +9,8 @@ public class VoxelEngine: ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core"
+                "Core",
+                "ProceduralMeshComponent"
             }
         );
 
@@ -18,7 +19,9 @@ public class VoxelEngine: ModuleRules
             {
                 "CoreUObject", 
                 "Engine",
-                "CoreData"
+                "NavigationSystem",
+                "UtilityFeatures",
+                "MessageHandler",
             }
         );
     }

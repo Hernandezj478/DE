@@ -41,6 +41,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FJumpChangedDelegate, bool, NewJump)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFallChangedDelegate, bool, NewFall);
 #pragma endregion
 
+#pragma region Weather
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWeatherChangedDelegate);
+#pragma endregion
+
+
 UCLASS()
 class MESSAGEHANDLER_API UMessagingSubsystem : public UEngineSubsystem
 {
@@ -110,6 +115,10 @@ public:
 	FFallChangedDelegate OnFallingChanged;
 #pragma endregion
 
+#pragma region Weather
+	FWeatherChangedDelegate OnWeatherChanged;
+#pragma endregion
+
 #pragma region TriggerFunctions
 	void UpdateTime(int NewDayOfYear, int NewYear, int NewMonth, int NewDayOfMonth, int NewHour, int NewMinute);
 	void UpdateDayOfYear(int NewDayOfYear);
@@ -133,6 +142,8 @@ public:
 	void UpdateCrouch(bool NewCrouch);
 	void UpdateJump(bool NewJump);
 	void UpdateFalling(bool NewFall);
+
+	void UpdateWeather();
 #pragma endregion
 
 	static UMessagingSubsystem* Get();

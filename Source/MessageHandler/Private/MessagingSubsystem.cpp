@@ -95,6 +95,11 @@ void UMessagingSubsystem::UpdateFalling(bool NewFall)
 	OnFallingChanged.Broadcast(NewFall);
 }
 
+void UMessagingSubsystem::UpdateWeather()
+{
+	OnWeatherChanged.Broadcast();
+}
+
 UMessagingSubsystem* UMessagingSubsystem::Get()
 {
 	if (!GEngine)

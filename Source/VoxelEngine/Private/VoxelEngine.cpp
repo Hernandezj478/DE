@@ -1,6 +1,6 @@
-#include "VoxelEngineModule.h"
+#include "VoxelEngine.h"
 
-IMPLEMENT_MODULE(FVoxelEngine, VoxelModule);
+IMPLEMENT_MODULE(FVoxelEngine, VoxelEngine);
 
 void FVoxelEngine::StartupModule()
 {
