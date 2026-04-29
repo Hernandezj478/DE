@@ -22,6 +22,16 @@ struct FTimeData
 	
 	float GetTimeOfDay() const {return (Hour * 60) + Minute;}
 	
+	void SetValues(int InDayOfYear, int InYear, int InMonth, int InDayOfMonth, int InHour, int InMinute)
+	{
+		DayOfYear = InDayOfYear;
+		Year = InYear;
+		Month = InMonth;
+		DayOfMonth = InDayOfMonth;
+		Hour = InHour;
+		Minute = InMinute;
+	}
+	
 	FString GetTimeString() const
 	{
 		FString TimeString;
