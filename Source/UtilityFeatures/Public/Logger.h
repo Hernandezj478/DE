@@ -7,8 +7,33 @@ UTILITYFEATURES_API DECLARE_LOG_CATEGORY_EXTERN(LogCoreData, Log, All);
 UTILITYFEATURES_API DECLARE_LOG_CATEGORY_EXTERN(LogCoreSystems, Log, All);
 UTILITYFEATURES_API DECLARE_LOG_CATEGORY_EXTERN(LogUtilityFeatures, Log, All);
 UTILITYFEATURES_API DECLARE_LOG_CATEGORY_EXTERN(LogEnvironment, Log, All);
+UTILITYFEATURES_API DECLARE_LOG_CATEGORY_EXTERN(LogVoxelEngine, Log, All);
 
 #define LOGPREFACE L"LogFile"
+
+#define LOG_MSG(Level, Format, ...) \
+	Logger::GetInstance()->AddMessage( \
+		FString::Printf(TEXT("%s: " Format), TEXT(__FUNCTION__), ##__VA_ARGS__), \
+		Level)
+
+#define LOG_UE_MSG(Category, Level, UELevel, Format, ...) \
+	do{ \
+		LOG_MSG(Level, Format, ##__VA_ARGS__);\
+		UE_LOG(Category, UELevel, TEXT("%s: " Format), TEXT(__FUNCTION__), ##__VA_ARGS__);\
+	} while(0)
+
+#define LOG_DEBUG(Category, Format, ...)\
+	LOG_UE_MSG(Category, DEBUG, Type::Log, Format, ##__VA_ARGS__)
+
+#define LOG_WARNING(Category, Format, ...)\
+	LOG_UE_MSG(Category, WARNING, Type::Warning, Format, ##__VA_ARGS__)
+
+#define LOG_ERROR(Category, Format, ...)\
+	LOG_UE_MSG(Category, ERROR, Type::Error, Format, ##__VA_ARGS__)
+
+#define LOG_CRITICAL(Category, Format, ...)\
+	LOG_UE_MSG(Category, CRITICAL, Type::Fatal, Format, ##__VA_ARGS__)
+
 
 enum ErrorLevel
 {
@@ -21,13 +46,13 @@ enum ErrorLevel
 class UTILITYFEATURES_API Logger
 {
 public:
+	Logger(const Logger&) = delete;
+	Logger& operator=(const Logger&) = delete;
+
 	static Logger* GetInstance()
 	{
-		if (pInstance == nullptr)
-		{
-			pInstance = new Logger();
-		}
-		return pInstance;
+		static Logger Instance;
+		return &Instance;
 	}
 	
 	void AddMessage(FString Message, ErrorLevel Level, int Key = -1)
@@ -43,7 +68,7 @@ public:
 		LogLine += Message;
 		LogLine += "\n";
 
-		FFileHelper::SaveStringToFile(LogLine, *Path(), FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
+		FFileHelper::SaveStringToFile(LogLine, *LogFile, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
 		
 #if UE_EDITOR
 		if (GEngine)
@@ -57,8 +82,15 @@ public:
 #endif
 	}
 private:
-	static Logger* pInstance;
-	
+	FString LogFile;
+
+
+	Logger()
+	{
+		LogFile = Path();
+	}
+	~Logger() {}
+
 	FString TodaysDateAsString()
 	{
 		const FDateTime Time;

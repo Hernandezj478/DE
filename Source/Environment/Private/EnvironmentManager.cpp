@@ -4,19 +4,25 @@
 #include "EnvironmentManager.h"
 #include "MessagingSubsystem.h"
 #include "DEWorldSettings.h"
+#include "WeatherTransitionData.h"
+#include "WeatherTransition.h"
 #include "Logger.h"
 
 void UEnvironmentManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	Logger::GetInstance()->AddMessage("UEnvironmentManager::Initialize", DEBUG);
+#if !UE_BUILD_SHIPPING
+	LOG_DEBUG(LogEnvironment, "Initialized Environment");
+#endif
 	if (UWorld* pWorld = GetWorld())
 	{
 		FString MapName = pWorld->GetMapName();
 		MapName = pWorld->RemovePIEPrefix(MapName);
 		if (MapName.Equals("MainMenu", ESearchCase::IgnoreCase))
 		{
-			Logger::GetInstance()->AddMessage("UEnvironmentManager::Initialize: MainMenu", DEBUG);
+#if !UE_BUILD_SHIPPING
+			LOG_DEBUG(LogEnvironment, "Main Menu");
+#endif
 			bCanEverTick = false;
 		}
 		SetTickableTickType(ETickableTickType::Conditional);
@@ -82,8 +88,9 @@ void UEnvironmentManager::OnWorldBeginPlay(UWorld& InWorld)
 		return;
 	}
 	CalculateDayLength();
+	SetDayOfYear();
 	pWorldSettings = Cast<ADEWorldSettings>(GetWorld()->GetWorldSettings());
-	if (pWorldSettings)
+	if (IsValid(pWorldSettings))
 	{
 		if (!pWorldSettings->DailyTemperatureRange.IsNull())
 		{
@@ -93,10 +100,16 @@ void UEnvironmentManager::OnWorldBeginPlay(UWorld& InWorld)
 		{
 			AnnualTemperatureRange = pWorldSettings->AnnualTemperatureRange.LoadSynchronous();
 		}
+		if (!pWorldSettings->WorldWeatherData.IsNull())
+		{
+			pWeatherData = Cast<UWeatherTransitionData>(pWorldSettings->WorldWeatherData.LoadSynchronous());
+			bHasWeatherData = true;
+			SelectNextWeatherState();
+		}
 	}
 	if (!IsValid(DailyTemperatureRange) && !IsValid(AnnualTemperatureRange))
 	{
-		Logger::GetInstance()->AddMessage("UEnvironmentManager::OnWorldBeginPlay - Daily/Annual Temperature Range not valid", DEBUG);
+		LOG_WARNING(LogEnvironment, "Daily/Annual Temperature Range not valid!");
 		bHasTemperatureData = false;
 	}
 }
@@ -133,6 +146,10 @@ void UEnvironmentManager::AdvanceHour()
 		AdvanceDay();
 	}
 	pMessanger->UpdateHour(CurrentTime.Hour);
+	if (bHasWeatherData && --RemainingWeatherDuration <= 0.f)
+	{
+		SelectNextWeatherState();
+	}
 }
 
 void UEnvironmentManager::AdvanceDay()
@@ -217,26 +234,37 @@ void UEnvironmentManager::SetDayOfYear()
 	{
 	case 12:
 		CurrentTime.DayOfYear += 30;
+		[[fallthrough]];
 	case 11:
 		CurrentTime.DayOfYear += 31;
+		[[fallthrough]];
 	case 10:
 		CurrentTime.DayOfYear += 30;
+		[[fallthrough]];
 	case 9:
 		CurrentTime.DayOfYear += 31;
+		[[fallthrough]];
 	case 8:
 		CurrentTime.DayOfYear += 31;
+		[[fallthrough]];
 	case 7:
 		CurrentTime.DayOfYear += 30;
+		[[fallthrough]];
 	case 6:
 		CurrentTime.DayOfYear += 31;
+		[[fallthrough]];
 	case 5:
 		CurrentTime.DayOfYear += 30;
+		[[fallthrough]];
 	case 4:
 		CurrentTime.DayOfYear += 31;
+		[[fallthrough]];
 	case 3:
 		CurrentTime.DayOfYear += ((CurrentTime.Year % 4 == 0) && (!(CurrentTime.Year % 100 == 0) || (CurrentTime.Year % 400 == 0))) ? 29 : 28;
+		[[fallthrough]];
 	case 2:
 		CurrentTime.DayOfYear += 31;
+		[[fallthrough]];
 	case 1:
 		CurrentTime.DayOfYear += CurrentTime.DayOfMonth;
 	}
@@ -280,13 +308,95 @@ void UEnvironmentManager::UpdateTemperature(float DeltaTime)
 	}
 	else
 	{
-		Logger::GetInstance()->AddMessage("UEnvironmentManager::UpdateTemperature - No valid temperature curve found", WARNING);
+		LOG_WARNING(LogEnvironment, "No valid temperature curve found!");
 	}
 	if (bUseCelsius)
 	{
 		CurrentTemperature = ConvertToCelsius(CurrentTemperature);
 	}
-	pMessanger->UpdateTemperature(CurrentTemperature);
+	CurrentTemperature += CurrentWeatherState.TemeratureModifier;
+	if (pMessanger)
+	{
+		pMessanger->UpdateTemperature(CurrentTemperature);
+	}
+}
+
+void UEnvironmentManager::SelectNextWeatherState()
+{
+	if (!IsValid(pWeatherData))
+	{
+		LOG_WARNING(LogEnvironment, "Weather data is invalid");
+		return;
+	}
+	const FWeatherTransitionList* pTransitions = pWeatherData->TransitionTable.Find(CurrentWeatherType);
+	if (!pTransitions || pTransitions->Transitions.IsEmpty())
+	{
+		LOG_WARNING(LogEnvironment, "No Transition Data available");
+		return;
+	}
+	ESeason CurrentSeason = GetCurrentSeason();
+	TArray<const FWeatherTransition*> ValidTransition;
+	for (const FWeatherTransition& T : pTransitions->Transitions)
+	{
+		if (!T.bSeasonRestricted || T.AllowedSeasons.Contains(CurrentSeason))
+		{
+			ValidTransition.Add(&T);
+		}
+	}
+	if (ValidTransition.IsEmpty())
+	{
+		LOG_ERROR(LogEnvironment, "No valid transitions available");
+		return;
+	}
+	float TotalWeight = 0.f;
+	for (const FWeatherTransition* T : ValidTransition)
+	{
+		TotalWeight += T->Weight;
+	}
+	float Roll = FMath::FRandRange(0.f, TotalWeight);
+	float Accumulated = 0.f;
+	const FWeatherTransition* Selected = ValidTransition.Last();
+	for (const FWeatherTransition* T : ValidTransition)
+	{
+		Accumulated += T->Weight;
+		if (Roll <= Accumulated)
+		{
+			Selected = T;
+			break;
+		}
+	}
+	EWeatherType NewWeatherType = Selected->ToWeatherType;
+	if (const FWeatherState* pDefaults = pWeatherData->WeatherStateDefaults.Find(NewWeatherType))
+	{
+		CurrentWeatherState = *pDefaults;
+		CurrentWeatherType = NewWeatherType;
+		RemainingWeatherDuration = FMath::FRandRange(CurrentWeatherState.MinDuration, CurrentWeatherState.MaxDuration);
+		if (pMessanger)
+		{
+			pMessanger->UpdateWeather();
+		}
+	}
+	else
+	{
+		LOG_ERROR(LogEnvironment, "No Weather Type found");
+	}
+}
+
+ESeason UEnvironmentManager::GetCurrentSeason() const
+{
+	if (CurrentTime.DayOfYear < VERNALEQUINOX || CurrentTime.DayOfYear >= WINTERSOLSTICE)
+	{
+		return ESeason::Winter;
+	}
+	if (CurrentTime.DayOfYear < SUMMERSOLSTICE)
+	{
+		return ESeason::Spring;
+	}
+	if (CurrentTime.DayOfYear < AUTUMNEQUINOX)
+	{
+		return ESeason::Summer;
+	}
+	return ESeason::Autumn;
 }
 
 float UEnvironmentManager::ConvertToCelsius(const float Fahrenheit)

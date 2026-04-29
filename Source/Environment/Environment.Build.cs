@@ -19,8 +19,8 @@ public class Environment : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "UtilityFeatures",
-                "CoreData",
-                "MessageHandler"
+                "MessageHandler",
+                "DE"
             }
         );
     }

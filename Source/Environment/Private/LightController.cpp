@@ -21,12 +21,7 @@ ALightController::ALightController()
 void ALightController::TimeChangedUpdate(int DayOfYear, int Year, int Month, 
 	int DayOfMonth, int Hour, int Minute)
 {
-	CurrentTime.DayOfYear = DayOfYear;
-	CurrentTime.Year = Year;
-	CurrentTime.Month = Month;
-	CurrentTime.DayOfMonth = DayOfMonth;
-	CurrentTime.Hour = Hour;
-	CurrentTime.Minute = Minute;
+	CurrentTime.SetValues(DayOfYear, Year, Month, DayOfMonth, Hour, Minute);
 	CurrentTimeOfDay = CurrentTime.GetTimeOfDay();
 	UpdateFromNewTimeData();
 }
@@ -109,7 +104,7 @@ void ALightController::UpdateSunLight()
 {
 	if (!IsValid(SunLightActor) || !IsValid(DailySunRotation))
 	{
-		Logger::GetInstance()->AddMessage("ALightController::UpdateSunLight: SunLightActor or DailySunRotation is not valid", ERROR);
+		LOG_ERROR(LogEnvironment, "SunLightActor or DailySunRotation is not valid");
 		return;
 	}
 	float NewLightIntensity = DailySunRotation->GetUnadjustedLinearColorValue(CurrentTimeOfDay).A;

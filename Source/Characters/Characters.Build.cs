@@ -11,6 +11,7 @@ public class Characters : ModuleRules
             {
                 "Core",
                 "EnhancedInput",
+                "Interface"
             }
         );
 
@@ -20,10 +21,10 @@ public class Characters : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "CoreData",
-                "Statline",
                 "Inventory",
                 "UtilityFeatures",
-                "MessageHandler"
+                "MessageHandler",
+                "VoxelEngine"
             }
         );
     }

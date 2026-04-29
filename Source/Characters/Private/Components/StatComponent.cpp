@@ -26,11 +26,11 @@ void UStatComponent::BeginPlay()
 #if !UE_BUILD_SHIPPING
 	if (!pMessanger)
 	{
-		Logger::GetInstance()->AddMessage("Messaging Subsystem not found!", CRITICAL);
+		LOG_CRITICAL(LogCharacters, "Missing Messaging Subsystem!");
 	}
 	if (!CharacterOwner)
 	{
-		Logger::GetInstance()->AddMessage("StatComponent must have ACharacterBase owner!", CRITICAL);
+		LOG_CRITICAL(LogCharacters, "No Character Owner found for Stat Component!");
 	}
 #endif // !UE_BUILD_SHIPPING
 }

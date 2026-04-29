@@ -5,14 +5,16 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Components/DECharacterMovementComponent.h"
+#include "VoxelInterface.h"
 #include "CharacterBase.generated.h"
 
 class UStatComponent;
 class UMovementStateComponent;
 class UInventoryComponent;
+class AVoxelWorldActor;
 
 UCLASS(Abstract, NotBlueprintable)
-class CHARACTERS_API ACharacterBase : public ACharacter
+class CHARACTERS_API ACharacterBase : public ACharacter, public IVoxelInterface
 {
 	GENERATED_BODY()
 
@@ -63,6 +65,12 @@ public:
 	bool IsSprinting() const;
 	bool IsRunning() const;
 	bool IsFalling() const;
+
+	// Terrain Interface
+	UFUNCTION(BlueprintCallable)
+	virtual void RequestTerrainDig(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength) override;
+	UFUNCTION(Blueprintcallable)
+	virtual void RequestTerrainAdd(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength) override;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -78,6 +86,17 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = true))
 	UInventoryComponent* InventoryComponent;
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestDig(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength);
+	bool ServerRequestDig_Validate(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength);
+	void ServerRequestDig_Implementation(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestAdd(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength);
+	bool ServerRequestAdd_Validate(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength);
+	void ServerRequestAdd_Implementation(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength);
+
 };
 
 inline bool ACharacterBase::IsSprinting() const

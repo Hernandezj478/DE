@@ -4,6 +4,7 @@
 #include "CharacterBase.h"
 #include "Components/StatComponent.h"
 #include "InventoryComponent.h"
+#include "VoxelWorldActor.h"
 #include "Logger.h"
 #include "Net/UnrealNetwork.h"
 
@@ -23,7 +24,7 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer) :
 	Statline = CreateDefaultSubobject<UStatComponent>(TEXT("Statline"));
 	if (!IsValid(Statline))
 	{
-		Logger::GetInstance()->AddMessage("Statline has not been created/initialized", ERROR);
+		LOG_ERROR(LogCharacters, "Statline has not been created/initialized");
 	}
 }
 
@@ -192,4 +193,60 @@ bool ACharacterBase::CanRun()
 {
 	// Running does not drain stamina, but will cause thirst/hunger to drain faster
 	return Statline && Statline->CanRun();
+}
+
+void ACharacterBase::RequestTerrainDig(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
+{
+	if (!TerrainActor)
+	{
+		return;
+	}
+	if (HasAuthority())
+	{
+		TerrainActor->DigSphere(WorldCenter, Radius, Strength);
+	}
+	else
+	{
+		ServerRequestDig(TerrainActor, WorldCenter, Radius, Strength);
+	}
+}
+
+bool ACharacterBase::ServerRequestDig_Validate(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
+{
+	return TerrainActor != nullptr 
+		&& Radius > 0.f && Radius <= 2000.f 
+		&& Strength > 0.f && Strength <= 1.f;
+}
+
+void ACharacterBase::ServerRequestDig_Implementation(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
+{
+	TerrainActor->DigSphere(WorldCenter, Radius, Strength);
+}
+
+void ACharacterBase::RequestTerrainAdd(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
+{
+	if (!TerrainActor)
+	{
+		return;
+	}
+	if (HasAuthority())
+	{
+		TerrainActor->AddSphere(WorldCenter, Radius, Strength);
+	}
+	else
+	{
+		ServerRequestAdd(TerrainActor, WorldCenter, Radius, Strength);
+	}
+}
+
+bool ACharacterBase::ServerRequestAdd_Validate(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
+{
+	return TerrainActor != nullptr
+		&& Radius > 0.f && Radius <= 2000.f
+		&& Strength > 0.f && Strength <= 1.f;
+}
+
+void ACharacterBase::ServerRequestAdd_Implementation(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
+{
+	TerrainActor->AddSphere(WorldCenter, Radius, Strength);
 }

@@ -1,5 +1,6 @@
 #include "Components/DECharacterMovementComponent.h"
 #include "CharacterBase.h"
+#include "MessagingSubsystem.h"
 #include "Logger.h"
 
 DEFINE_LOG_CATEGORY(LogMovement);
@@ -305,7 +306,7 @@ void UDECharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float R
 
 bool UDECharacterMovementComponent::CanSprintInCurrentState()
 {
-	if (!IsMovingOnGround() || !UpdatedComponent || UpdatedComponent->IsSimulatingPhysics() || GetCurrentAcceleration().IsNearlyZero())
+	if (!UpdatedComponent || UpdatedComponent->IsSimulatingPhysics() || GetCurrentAcceleration().IsNearlyZero())
 	{
 		return false;
 	}
@@ -318,7 +319,7 @@ bool UDECharacterMovementComponent::CanSprintInCurrentState()
 
 bool UDECharacterMovementComponent::CanRunInCurrentState()
 {
-	if (!IsMovingOnGround() || !UpdatedComponent || UpdatedComponent->IsSimulatingPhysics())
+	if (!UpdatedComponent || UpdatedComponent->IsSimulatingPhysics())
 	{
 		return false;
 	}
@@ -429,7 +430,7 @@ void UDECharacterMovementComponent::BeginPlay()
 #if !UE_BUILD_SHIPPING
 	if (!CustomCharacterOwner)
 	{
-		Logger::GetInstance()->AddMessage("DECharacterMovementComponent requires ACharacterBase owner!", CRITICAL);
+		LOG_CRITICAL(LogCharacters, "CustomCharacterOwner missing!");
 	}
 #endif
 }

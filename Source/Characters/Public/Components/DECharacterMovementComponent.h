@@ -150,5 +150,5 @@ private:
 	float TurnFriction = 10.f;
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
 	float LandingSpeedBleedAmount = 0.25f;
-	
+
 };
