@@ -79,6 +79,37 @@ public:
 	FORCEINLINE float* GetDensityData() { return Densities.GetData(); }
 	FORCEINLINE const float* GetDensityData() const { return Densities.GetData(); }
 
+	FORCEINLINE EVoxelType GetVoxelType(const FVoxelCoord& C) const
+	{
+		if (!C.IsValid())
+		{
+			return EVoxelType::Air;
+		}
+		return static_cast<EVoxelType>(VoxelTypes[C.ToIndex()]);
+	}
+
+	FORCEINLINE EVoxelType GetVoxelType(int32 X, int32 Y, int32 Z) const
+	{
+		return GetVoxelType(FVoxelCoord(X, Y, Z));
+	}
+
+	FORCEINLINE void SetVoxelType(const FVoxelCoord& C, EVoxelType Type)
+	{
+		if (C.IsValid())
+		{
+			VoxelTypes[C.ToIndex()] = static_cast<uint8>(Type);
+		}
+	}
+
+	FORCEINLINE void SetVoxelType(int32 X, int32 Y, int32 Z, EVoxelType Type)
+	{
+		SetVoxelType(FVoxelCoord(X, Y, Z), Type);
+	}
+
+	FORCEINLINE const uint8* GetVoxelTypeData() const { return VoxelTypes.GetData(); }
+
+	void ApplyGeneratedData(TArray<float>&& InDensities, TArray<uint8>&& InVoxelTypes);
+
 	void FillDensity(float value);
 	void UploadMesh(UMaterialInterface* TerrainMaterial);
 
@@ -86,6 +117,7 @@ public:
 
 private:
 	TArray<float> Densities;
+	TArray<uint8> VoxelTypes;
 
 	UPROPERTY()
 	UProceduralMeshComponent* MeshComp = nullptr;

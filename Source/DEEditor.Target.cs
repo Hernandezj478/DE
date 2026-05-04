@@ -19,9 +19,7 @@ public class DEEditorTarget : TargetRules
 		ExtraModuleNames.AddRange(new string[]
 		{
 			"Characters", 
-			"CoreData", 
-			"CoreSystems", 
-			"Gameplay", 
+			"CoreData",
 			"Items", 
 			"Inventory", 
 			"Interface", 

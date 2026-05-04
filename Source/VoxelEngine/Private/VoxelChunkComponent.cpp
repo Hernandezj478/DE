@@ -1,13 +1,13 @@
 #include "VoxelChunkComponent.h"
 #include "ProceduralMeshComponent.h"
-
+#include "Logger.h"
 
 UVoxelChunkComponent::UVoxelChunkComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	Densities.SetNumZeroed(CHUNK_SAMPLE_COUNT);
+	VoxelTypes.SetNumZeroed(CHUNK_SAMPLE_COUNT);
 }
-
 
 // Called when the game starts
 void UVoxelChunkComponent::BeginPlay()
@@ -18,6 +18,17 @@ void UVoxelChunkComponent::BeginPlay()
 void UVoxelChunkComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+}
+
+void UVoxelChunkComponent::ApplyGeneratedData(TArray<float>&& InDensities, TArray<uint8>&& InVoxelTypes)
+{
+	if (InDensities.Num() != CHUNK_SAMPLE_COUNT || InVoxelTypes.Num() != CHUNK_SAMPLE_COUNT)
+	{
+		LOG_ERROR(LogVoxelEngine, "Invalid array size. Check array size for Densities or VoxelTypes");
+		return;
+	}
+	Densities = MoveTemp(InDensities);
+	VoxelTypes = MoveTemp(InVoxelTypes);
 }
 
 void UVoxelChunkComponent::FillDensity(float Value)

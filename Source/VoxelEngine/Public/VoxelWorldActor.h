@@ -8,6 +8,7 @@
 #include "VoxelWorldActor.generated.h"
 
 class UHeightmapProcessor;
+class UDataTable;
 
 UENUM(BlueprintType)
 enum class EVoxelTerrainSource : uint8
@@ -24,7 +25,10 @@ class VOXELENGINE_API AVoxelWorldActor : public AActor
 	
 public:	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World", meta = (ClampMin = "1", ClampMax = "16"))
-	int32 ViewDistance = 4;
+	int32 ViewDistanceXY = 4;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World", meta = (ClampMin = "1", ClampMax = "16"))
+	int32 ViewDistanceZ = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World")
 	int32 SurfaceChunkZ = 0;
@@ -41,6 +45,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Mesh")
 	EVoxelTerrainSource TerrainSource = EVoxelTerrainSource::ProceduralNoise;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Voxel World|Types")
+	UDataTable* VoxelTypeDataTable = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise", meta = (ClampMin = "0.0001", ClampMax = "0.1"))
 	float NoiseFrequency = 0.002f;
 
@@ -48,7 +55,7 @@ public:
 	float NoiseAmplitude = 6.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise")
-	float SurfaceLevel = 16.f;
+	float SurfaceLevel = 8.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise")
 	int32 NoiseSeed = 42;
@@ -56,8 +63,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise", meta = (ClampMin = "0.0001", ClampMax = "0.1"))
 	float CaveFrequency = 0.008f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise", meta = (ClampMin = "0.0", ClampMax = "10.0"))
-	float CaveAmplitude = 3.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise", meta = (ClampMin = "1", ClampMax = "32"))
+	int32 CaveDepthThreshold = 4;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Noise", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float CaveCarveThreshold = 0.72f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Heightmap")
 	UTexture2D* HeightmapTexture = nullptr;
@@ -75,8 +85,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Heightmap", meta = (ClampMin = "0.0001", ClampMax = "0.1"))
 	float HeightmapCaveFrequency = 0.0008f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Heightmap", meta = (ClampMin = "0.0", ClampMax = "10.0"))
-	float HeightmapCaveAmplitude = 3.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Voxel World|Heightmap", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HeightmapCaveCarveThreshold = 0.72f;
 
 	AVoxelWorldActor();
 	virtual void Tick(float DeltaTime) override;
@@ -84,6 +94,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Voxel World")
 	void RebuildTerrain();
+
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Voxel World")
+	void RegenerateSeed();
 
 	UFUNCTION(BlueprintCallable, Category = "Voxel Terrain|Modification")
 	void DigSphere(FVector WorldCenter, float Radius, float Strength = 1.0f);
@@ -125,11 +138,14 @@ private:
 
 	int32 LastReplayedIndex = 0;
 	bool bTerrainBuilt = false;
+	bool bHasGeneratedSeed = false;
+	bool bConstructed = false;
+
 	void CreateChunkGrid();
 	void DestroyChunkGrid();
 	UVoxelChunkComponent* CreateChunk(const FChunkCoord& Coord);
 
-	void DensityTaskAsync(UVoxelChunkComponent* Chunk);
+	void DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLevel);
 	void MeshTaskAsync(UVoxelChunkComponent* Chunk);
 
 	void ProcessPendingMeshQueue();
@@ -141,6 +157,8 @@ private:
 		TFunctionRef<float(float CurrentDensity, float Falloff)> DensityOp);
 	void RemeshDirtyChunks(const TSet<FChunkCoord>& DirtyChunks);
 	void ReplayModificationLog();
+
+	void GenerateNewSeed();
 
 	UFUNCTION()
 	void OnRep_NoiseSeed();

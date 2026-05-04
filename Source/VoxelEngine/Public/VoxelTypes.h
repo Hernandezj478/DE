@@ -10,6 +10,9 @@ static constexpr int32 CHUNK_SAMPLE_SIZE = CHUNK_SIZE + 1;
 // Total density samples stored per chunk
 static constexpr int32 CHUNK_SAMPLE_COUNT = CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE;
 
+// Extended array adds one border voxel on each side of sample grid.
+static const int32 CHUNK_EXTENDED_SIZE = CHUNK_SAMPLE_SIZE + 2;
+
 // Physical size of one voxl cell in UU (cm)
 static constexpr float VOXEL_SIZE = 50.f;	// Change to 50u after proven concept
 // Physical size of one chunk in UU
@@ -17,6 +20,7 @@ static constexpr float CHUNK_WORLD_SIZE = CHUNK_SIZE * VOXEL_SIZE;
 // Isosurface threshold. Density exactly at this value => on the surface.
 // Negative density => solid. Positive density => air
 static constexpr float ISO_LEVEL = 0.0f;
+
 
 USTRUCT(BlueprintType)
 struct FVoxelCoord
@@ -109,28 +113,112 @@ FORCEINLINE uint32 GetTypeHash(const FChunkCoord& Coord)
 UENUM(BlueprintType)
 enum class EVoxelType : uint8
 {
-	Air = 0,	// Empty - no geometry generated
-	Stone = 1,
-	Dirt = 2,
-	Wood = 3
-	// Add more as needed - max 255 types
+	// Empty
+	Air = 0,
+	// Surface (1-9)
+	Grass		= 1 UMETA(DisplayName = "Grass"),
+	Dirt		= 2 UMETA(DisplayName = "Dirt"),
+	Sand		= 3 UMETA(DisplayName = "Sand"),
+	Gravel		= 4 UMETA(DisplayName = "Gravel"),
+	Snow		= 5 UMETA(DisplayNam = "Snow"),
+
+	// Sub-surface (10-19)
+	Rock		= 10 UMETA(DisplayName = "Rock"),
+	Granite		= 11 UMETA(DisplayName = "Granite"),
+	Limestone	= 12 UMETA(DisplayName = "Limestone"),
+	Marble		= 13 UMETA(DisplayName = "Marble"),
+
+	// Ores (20-49)
+	Iron		= 20 UMETA(DisplayName = "Iron Ore"),
+	Copper		= 21 UMETA(DisplayName = "Copper Ore"),
+	Tin			= 22 UMETA(DisplayName = "Tin Ore"),
+	Lead		= 23 UMETA(DisplayName = "Lead Ore"),
+	Coal		= 24 UMETA(DisplayName = "Coal"),
+	Titanium	= 25 UMETA(DisplayName = "Titanium Ore"),
+	Cobalt		= 26 UMETA(DisplayName = "Cobalt Ore"),
+
+	// Special blocks (200-255)
+	Water		= 200 UMETA(DisplayName = "Water"),
+	EditorPaint = 253 UMETA(DisplayName = "Editor Paint"),
+	Unknown		= 255 UMETA(DisplayName = "Unknown")
 };
 
-struct FVoxelMaterial
+USTRUCT(BlueprintType)
+struct FVoxelDropEntry
 {
-	int32 MaterialIndex = 0;
-	float BlendWeight = 1.0f;
+	GENERATED_USTRUCT_BODY()
 
-	FVoxelMaterial() = default;
-	FVoxelMaterial(int32 InMaterialIndex) : MaterialIndex(InMaterialIndex) {}
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")
+	FName ItemID = NAME_None;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")
+	int32 MinQuantity = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")
+	int32 MaxQuantity = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DropChance = 1.0f;
+
+	FVoxelDropEntry() = default;
 };
 
-struct FHermiteData
+USTRUCT(BlueprintType)
+struct VOXELENGINE_API FVoxelTypeData : public FTableRowBase
 {
-	float T = 0.f;
+	GENERATED_USTRUCT_BODY()
 
-	FVector Normal = FVector::ZeroVector;
-	bool bHasIntersection = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Display")
+	FText DisplayName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Display")
+	int32 TextureArrayIndex = -1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+	TSoftObjectPtr<UTexture2D> AlbedoTexture;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+	TSoftObjectPtr<UTexture2D> NormalTexture;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Textures")
+	TSoftObjectPtr<UTexture2D> ORMTexture;
+
+	// Minimum tool tier requiered to mine this voxel (0 = hand)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining")
+	int32 RequiredToolTier = 0;
+
+	// How much damage this voxel absorbeds per mining tick
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining", meta = (ClampMin = "0.1"))
+	float Hardness = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining")
+	bool bIsMineable = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mining")
+	bool bSupportsStructures = true;
+
+	// Loot
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Loot")
+	TArray<FVoxelDropEntry> Drops;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Generation")
+	int32 MinGenerationDepth = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Generation")
+	int32 MaxGenerationDepth = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Generation", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float OreRarityThreshold = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Generation", meta = (ClampMin = "0.001"))
+	float OreNoiseFrequency = 0.05f;
+
+	// If non-empty, this ore only appears in these biomes.
+	// TODO: Change from FName to biome enum. this will allow to select biome from dropdown
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Generation")
+	TArray<FName> AllowedBiomes;
+
+	FVoxelTypeData() = default;
 };
 
 UENUM(BlueprintType)
@@ -138,8 +226,8 @@ enum class EVoxelOpType : uint8
 {
 
 	DigSphere = 0	UMETA(DisplayName = "Dig Sphere"),
-	
 	AddSphere = 1	UMETA(DisplayName = "Add Sphere"),
+	PaintType = 2	UMETA(DisplayName = "Paint Type")
 
 };
 
@@ -160,9 +248,29 @@ struct FVoxelModification
 	UPROPERTY()
 	float Strength = 1.0f;
 
+	UPROPERTY()
+	uint8 TypeToPaint = static_cast<uint8>(EVoxelType::Unknown);
+
 	FVoxelModification() = default;
 
 	FVoxelModification(EVoxelOpType InOp, FVector InCenter, float InRadius, float InStrength = 1.0f)
 		: OpType(InOp), WorldCenter(InCenter), Radius(InRadius), Strength(InStrength)
 	{}
+};
+// NOTE: we should use this struct for the voxel type data
+struct FVoxelMaterial
+{
+	int32 MaterialIndex = 0;
+	float BlendWeight = 1.0f;
+
+	FVoxelMaterial() = default;
+	FVoxelMaterial(int32 InMaterialIndex) : MaterialIndex(InMaterialIndex) {}
+};
+
+struct FHermiteData
+{
+	float T = 0.f;
+
+	FVector Normal = FVector::ZeroVector;
+	bool bHasIntersection = false;
 };

@@ -20,11 +20,6 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "CoreSystems",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "Items",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
@@ -36,11 +31,6 @@
 		},
 		{
 			"Name": "Interface",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "Gameplay",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},

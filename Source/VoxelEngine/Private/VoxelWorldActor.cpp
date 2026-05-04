@@ -7,6 +7,15 @@
 #include "Async/Async.h"
 #include "Logger.h"
 
+struct FCapturedTypeRule
+{
+	uint8 TypeIndex;
+	int32 MinDepth;
+	int32 MaxDepth;
+	float NoiseFrequency;
+	float RarityThreshold;
+};
+
 static FORCEINLINE float Hash(int32 X, int32 Y, int32 Z, int32 Seed)
 {
 	int32 N = X + Y * 57 + Z * 113 + Seed * 131;
@@ -90,8 +99,13 @@ AVoxelWorldActor::AVoxelWorldActor()
 void AVoxelWorldActor::BeginPlay()
 {
 	Super::BeginPlay();
-	if(!bTerrainBuilt)
+	if(HasAuthority())
 	{
+		if (!bHasGeneratedSeed)
+		{
+			GenerateNewSeed();
+		}
+		ReplicatedSeed = NoiseSeed;
 		RebuildTerrain();
 	}
 }
@@ -105,7 +119,18 @@ void AVoxelWorldActor::OnConstruction(const FTransform& Transform)
 	{
 		return;
 	}
-	RebuildTerrain();
+	if (!bHasGeneratedSeed)
+	{
+		GenerateNewSeed();
+		#if WITH_EDITOR
+			MarkPackageDirty();
+		#endif
+	}
+	if (!bConstructed)
+	{
+		RebuildTerrain();
+		bConstructed = true;
+	}
 }
 
 void AVoxelWorldActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -177,6 +202,12 @@ void AVoxelWorldActor::RebuildTerrain()
 	LastReplayedIndex = 0;
 }
 
+void AVoxelWorldActor::RegenerateSeed()
+{
+	GenerateNewSeed();
+	RebuildTerrain();
+}
+
 void AVoxelWorldActor::DigSphere(FVector WorldCenter, float Radius, float Strength)
 {
 	const FVoxelModification Mod(EVoxelOpType::DigSphere, WorldCenter, Radius, Strength);
@@ -225,22 +256,23 @@ void AVoxelWorldActor::MulticastApplyAdd_Implementation(FVector WorldCenter, flo
 void AVoxelWorldActor::CreateChunkGrid()
 {
 	const FChunkCoord ActorChunkCoord = FChunkCoord::FromWorldPosition(GetActorLocation());
-	for (int32 CZ = -ViewDistance; CZ <= ViewDistance; CZ++)
+	for (int32 CZ = -ViewDistanceZ; CZ <= ViewDistanceZ; CZ++)
 	{
-		for (int32 CY = -ViewDistance; CY <= ViewDistance; CY++)
+		for (int32 CY = -ViewDistanceXY; CY <= ViewDistanceXY; CY++)
 		{
-			for (int32 CX = -ViewDistance; CX <= ViewDistance; CX++)
+			for (int32 CX = -ViewDistanceXY; CX <= ViewDistanceXY; CX++)
 			{
 				const FChunkCoord Coord(
 					ActorChunkCoord.X + CX, 
 					ActorChunkCoord.Y + CY, 
 					ActorChunkCoord.Z + CZ + SurfaceChunkZ);
 				UVoxelChunkComponent* Chunk = CreateChunk(Coord);
-				DensityTaskAsync(Chunk);
+				const int32 ChebDist = FMath::Max3(FMath::Abs(CX), FMath::Abs(CY), FMath::Abs(CZ));
+				const int32 LODLevel = (ChebDist <= 1) ? 0 : (ChebDist <= 3) ? 1 : 2;
+				DensityTaskAsync(Chunk, LODLevel);
 			}
 		}
 	}
-	bTerrainBuilt = true;
 }
 
 void AVoxelWorldActor::DestroyChunkGrid()
@@ -259,7 +291,6 @@ void AVoxelWorldActor::DestroyChunkGrid()
 		Chunk->DestroyComponent();
 	}
 	Chunks.Empty();
-	bTerrainBuilt = false;
 }
 
 UVoxelChunkComponent* AVoxelWorldActor::CreateChunk(const FChunkCoord& Coord)
@@ -275,9 +306,81 @@ UVoxelChunkComponent* AVoxelWorldActor::CreateChunk(const FChunkCoord& Coord)
 	return NewChunk;
 }
 
-void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk)
+void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLevel)
 {
 	Chunk->SetState(EChunkState::GeneratingDensity);
+
+	TArray<FCapturedTypeRule> CapturedRules;
+	int32 OreMinDepthGlobal = INT_MAX;
+	int32 OreMaxDepthGlobal = 0;
+
+	if (VoxelTypeDataTable)
+	{
+		const UEnum* VoxelTypeEnum = StaticEnum<EVoxelType>();
+		for (const FName& RowName : VoxelTypeDataTable->GetRowNames())
+		{
+			const FVoxelTypeData* Row = VoxelTypeDataTable->FindRow<FVoxelTypeData>(
+				RowName, TEXT("DensityTaskAsync"), false);
+			if (!Row || Row->MaxGenerationDepth <= 0)
+			{
+				continue;
+			}
+			const int64 EnumValue = VoxelTypeEnum ? VoxelTypeEnum->GetValueByNameString(RowName.ToString()) : INDEX_NONE;
+			if (EnumValue == INDEX_NONE)
+			{
+				continue;
+			}
+			FCapturedTypeRule Rule;
+			Rule.TypeIndex = static_cast<uint8>(EnumValue);
+			Rule.MinDepth = Row->MinGenerationDepth;
+			Rule.MaxDepth = Row->MaxGenerationDepth;
+			Rule.RarityThreshold = Row->OreRarityThreshold;
+			Rule.NoiseFrequency = Row->OreNoiseFrequency;
+			CapturedRules.Add(Rule);
+
+			if (Rule.RarityThreshold > 0.f)
+			{
+				OreMinDepthGlobal = FMath::Min(OreMinDepthGlobal, Rule.MinDepth);
+				OreMaxDepthGlobal = FMath::Max(OreMaxDepthGlobal, Rule.MaxDepth);
+			}
+		}
+		CapturedRules.Sort([](const FCapturedTypeRule& A, const FCapturedTypeRule& B)
+			{
+				return A.MinDepth > B.MinDepth;
+			});
+	}
+
+	if (OreMaxDepthGlobal == 0)
+	{
+		OreMinDepthGlobal = INT_MAX;
+		OreMaxDepthGlobal = -1;
+	}
+
+	TArray<float> CapturedHeights;
+	int32 CapturedHMWidth = 0;
+	int32 CapturedHMHeight = 0;
+	float CapturedHMMin = 0.f;
+	float CapturedHMMax = 32.f;
+	bool bUseHeightmap = false;
+
+	if (TerrainSource == EVoxelTerrainSource::Heightmap && HeightmapProcessor && HeightmapProcessor->IsLoaded())
+	{
+		CapturedHMWidth = HeightmapProcessor->GetImageWidth();
+		CapturedHMHeight = HeightmapProcessor->GetImageHeight();
+		CapturedHMMin = HeightmapProcessor->MinHeightVoxels;
+		CapturedHMMax = HeightmapProcessor->MaxHeightVoxels;
+		bUseHeightmap = true;
+
+		CapturedHeights.SetNumUninitialized(CapturedHMWidth * CapturedHMHeight);
+		for (int32 PY = 0; PY < CapturedHMHeight; PY++)
+		{
+			for (int32 PX = 0; PX < CapturedHMWidth; PX++)
+			{
+				CapturedHeights[PY * CapturedHMWidth + PX] = HeightmapProcessor->GetNormalizedValue(PX, PY);
+			}
+		}
+	}
+
 	const EVoxelTerrainSource CapturedSource = TerrainSource;
 	const FVector ChunkOrigin = Chunk->GetChunkWorldOrigin();
 	const FVector CapturedActorLocation = GetActorLocation();
@@ -286,27 +389,75 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk)
 	const float CapturedSurface = SurfaceLevel;
 	const int32 CapturedSeed = NoiseSeed;
 	const float CapturedCaveFreq = CaveFrequency;
-	const float CapturedCaveAmp = CaveAmplitude;
+	const float CapturedCaveThresh = CaveCarveThreshold;
+	const float CapturedCaveDepth = static_cast<float>(CaveDepthThreshold);
+
 	const bool CapturedHMCaves = bHeightmapAddCaves;
 	const float CapturedHMCaveFreq = HeightmapCaveFrequency;
-	const float CapturedHMCaveAmp = HeightmapCaveAmplitude;
+	const float CapturedHMCaveThresh = HeightmapCaveCarveThreshold;
 
-	UHeightmapProcessor* CapturedHM = HeightmapProcessor;
+	const int32 SurfaceOctaves = (LODLevel == 0) ? 4 : (LODLevel == 1) ? 3 : 2;
+	const int32 CaveOctaves = (LODLevel == 0) ? 3 : (LODLevel == 1) ? 2 : 1;
+
 	TWeakObjectPtr<UVoxelChunkComponent> WeakChunk(Chunk);
 	TWeakObjectPtr<AVoxelWorldActor> WeakSelf(this);
 
-	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [=]()
-	{
-		UVoxelChunkComponent* C = WeakChunk.Get();
-		if (!C)
+	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,
+		[=, Rules = MoveTemp(CapturedRules), Heights = MoveTemp(CapturedHeights),
+		OreMinD = OreMinDepthGlobal, OreMaxD = OreMaxDepthGlobal]() mutable
 		{
-			return;
-		}
-		if (CapturedSource == EVoxelTerrainSource::Heightmap && CapturedHM && CapturedHM->IsLoaded())
+			TArray<float> LocalDensities;
+			TArray<uint8> LocalTypes;
+			LocalDensities.SetNumUninitialized(CHUNK_SAMPLE_COUNT);
+			LocalTypes.SetNumUninitialized(CHUNK_SAMPLE_COUNT);
+
+			TArray<float> SurfaceHeightCache;
+			SurfaceHeightCache.SetNumUninitialized(CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE);
+
+			auto HMSampleClamped = [&Heights, CapturedHMWidth, CapturedHMHeight](int32 PX, int32 PY) -> float
+				{
+					PX = FMath::Clamp(PX, 0, CapturedHMWidth - 1);
+					PY = FMath::Clamp(PY, 0, CapturedHMHeight - 1);
+					return Heights[PY * CapturedHMWidth + PX];
+				};
+
+			auto HMSampleBilinear = [&HMSampleClamped](float FX, float FY) -> float
+				{
+					const int32 X0 = static_cast<int32>(FX);
+					const int32 Y0 = static_cast<int32>(FY);
+					const float TX = FX - X0;
+					const float TY = FY - Y0;
+					return FMath::Lerp(
+						FMath::Lerp(HMSampleClamped(X0, Y0), HMSampleClamped(X0 + 1, Y0), TX),
+						FMath::Lerp(HMSampleClamped(X0, Y0 + 1), HMSampleClamped(X0 + 1, Y0 + 1), TX),
+						TY);
+				};
+			auto HMGetHeightAtWorld = [&](float WX, float WY, float OriginX, float OriginY) -> float
+				{
+					const float FX = (WX - OriginX) / VOXEL_SIZE;
+					const float FY = (WY - OriginY) / VOXEL_SIZE;
+					const float T = HMSampleBilinear(FX, FY);
+					return FMath::Lerp(CapturedHMMin, CapturedHMMax, T);
+				};
+		auto ApplyCaves = [](float SurfDensity, float CaveNoise3D, float CarveThreshold, float DepthThreshold) -> float
+			{
+				if (SurfDensity >= -DepthThreshold) 
+				{
+					return SurfDensity;
+				}
+				const float Normalized = CaveNoise3D * 0.5f + 0.5f;
+				if (Normalized <= CarveThreshold) 
+				{
+					return SurfDensity;
+				}
+				return 1.0f;
+			};
+
+		if (bUseHeightmap && Heights.Num() > 0)
 		{
 			
-			const float HalfW = CapturedHM->GetImageWidth() * VOXEL_SIZE * 0.5f;
-			const float HalfH = CapturedHM->GetImageHeight() * VOXEL_SIZE * 0.5f;
+			const float HalfW = CapturedHMWidth * VOXEL_SIZE * 0.5f;
+			const float HalfH = CapturedHMHeight * VOXEL_SIZE * 0.5f;
 			const float OriginX = -HalfW;
 			const float OriginY = -HalfH;
 			for (int32 LY = 0; LY < CHUNK_SAMPLE_SIZE; LY++)
@@ -315,25 +466,25 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk)
 				{
 					const float WX = ChunkOrigin.X + LX * VOXEL_SIZE;
 					const float WY = ChunkOrigin.Y + LY * VOXEL_SIZE;
+					const float TerrainH = HMGetHeightAtWorld(WX, WY, OriginX, OriginY);
+					SurfaceHeightCache[LY * CHUNK_SAMPLE_SIZE + LX] = TerrainH;
 
-					const float TerrainH = CapturedHM->GetHeightAtWorld(WX, WY, OriginX, OriginY, VOXEL_SIZE);
 					for (int32 LZ = 0; LZ < CHUNK_SAMPLE_SIZE; LZ++)
 					{
 						const float WZ = ChunkOrigin.Z + LZ * VOXEL_SIZE;
 						const float RelativeZ = WZ - CapturedActorLocation.Z;
 						const float SurfDensity = (RelativeZ / VOXEL_SIZE) - TerrainH;
-						float CaveDensity = 0.f;
-						if (CapturedHMCaves && SurfDensity < -4.f)
+						float FinalDensity = SurfDensity;
+						if (CapturedHMCaves && SurfDensity < -CapturedCaveDepth)
 						{
 							const float CN = FBM(
 								WX * CapturedHMCaveFreq,
 								WY * CapturedHMCaveFreq,
 								WZ * CapturedHMCaveFreq,
 								CapturedSeed + 999, 3, 1.f, 1.f, 2.f, 0.6f);
-							const float Blend = FMath::SmoothStep(-4.f, -8.f, SurfDensity);
-							CaveDensity = CN * CapturedHMCaveAmp * Blend;
+							FinalDensity = ApplyCaves(SurfDensity, CN, CapturedHMCaveThresh, CapturedCaveDepth);
 						}
-						C->SetDensity(LX, LY, LZ, SurfDensity + CaveDensity);
+						LocalDensities[FVoxelCoord(LX, LY, LZ).ToIndex()] = FinalDensity;
 					}
 				}
 			}
@@ -354,27 +505,94 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk)
 						CapturedSeed);
 
 					const float SurfaceH = CapturedSurface + SurfNoise * CapturedAmp;
+					SurfaceHeightCache[LY * CHUNK_SAMPLE_SIZE + LX] = SurfaceH;
 					for (int32 LZ = 0; LZ < CHUNK_SAMPLE_SIZE; LZ++)
 					{
 						const float WZ = ChunkOrigin.Z + LZ * VOXEL_SIZE;
-						const float SurfDensity = (WZ / VOXEL_SIZE) - SurfaceH;
-						float CaveDensity = 0.f;
-						if (SurfDensity < -4.f)
+						const float RelativeZ = WZ - CapturedActorLocation.Z;
+						const float SurfDensity = (RelativeZ / VOXEL_SIZE) - SurfaceH;
+						float FinalDensity = SurfDensity;
+						if (SurfDensity < -CapturedCaveDepth)
 						{
 							const float CN = FBM(
 								WX * CapturedCaveFreq,
 								WY * CapturedCaveFreq,
 								WZ * CapturedCaveFreq,
 								CapturedSeed + 999, 3, 1.f, 1.f, 2.f, 0.6f);
-							const float Blend = FMath::SmoothStep(-4.f, -8.f, SurfDensity);
-							CaveDensity = CN * CapturedCaveAmp * Blend;
+							FinalDensity = ApplyCaves(SurfDensity, CN, CapturedCaveThresh, CapturedCaveDepth);
 						}
-						C->SetDensity(LX, LY, LZ, SurfDensity + CaveDensity);
+						LocalDensities[FVoxelCoord(LX, LY, LZ).ToIndex()] = FinalDensity;
 					}
 				}
 			}
 		}
-		AsyncTask(ENamedThreads::GameThread, [WeakChunk, WeakSelf]()
+
+		for (int32 LY = 0; LY < CHUNK_SAMPLE_SIZE; LY++)
+		{
+			for (int32 LX = 0; LX < CHUNK_SAMPLE_SIZE; LX++)
+			{
+				const float SurfaceH = SurfaceHeightCache[LY * CHUNK_SAMPLE_SIZE + LX];
+				const float WX = ChunkOrigin.X + LX * VOXEL_SIZE;
+				const float WY = ChunkOrigin.Y + LY * VOXEL_SIZE;
+
+				for (int32 LZ = 0; LZ < CHUNK_SAMPLE_SIZE; LZ++)
+				{
+					const int32 Idx = FVoxelCoord(LX, LY, LZ).ToIndex();
+					if (LocalDensities[Idx] >= ISO_LEVEL)
+					{
+						LocalTypes[Idx] = static_cast<uint8>(EVoxelType::Air);
+						continue;
+					}
+					const float LocalZ = ChunkOrigin.Z - CapturedActorLocation.Z;
+					const float VoxelZ = (LocalZ / VOXEL_SIZE) + static_cast<float>(LZ);
+					const float Depth = SurfaceH - VoxelZ;
+					const float WZ = ChunkOrigin.Z + LZ * VOXEL_SIZE;
+					const int32 DepthVoxels = FMath::FloorToInt(Depth);
+
+					EVoxelType FinalType = EVoxelType::Rock;
+
+					for (const FCapturedTypeRule& Rule : Rules)
+					{
+						if (Depth < static_cast<float>(Rule.MinDepth) 
+							|| Depth >= static_cast<float>(Rule.MaxDepth))
+						{
+							continue;
+						}
+						if (Rule.RarityThreshold <= 0.f)
+						{
+							// Solid layer - assign as base, keep checking for ores
+							FinalType = static_cast<EVoxelType>(Rule.TypeIndex);
+						}
+						else
+						{
+							// Ore candidate - noise check
+							const int32 OreSeed = CapturedSeed + 1000 + static_cast<int32>(Rule.TypeIndex) * 37;
+							if (DepthVoxels < OreMinD || DepthVoxels > OreMaxD)
+							{
+								continue;
+							}
+							const float OreSample = FBM(
+								WX * Rule.NoiseFrequency,
+								WY * Rule.NoiseFrequency,
+								WZ * Rule.NoiseFrequency,
+								OreSeed, 2, 1.f, 1.f, 2.f, 0.5f);
+							const float Normalized = OreSample * 0.5f + 0.5f;
+							if (Normalized > Rule.RarityThreshold)
+							{
+								FinalType = static_cast<EVoxelType>(Rule.TypeIndex);
+								break;// ore found
+							}
+						}
+					}
+					LocalTypes[Idx] = static_cast<uint8>(FinalType);
+				}
+			}
+		}
+
+
+		AsyncTask(ENamedThreads::GameThread, [WeakChunk, WeakSelf,
+		Densities = MoveTemp(LocalDensities),
+		Types = MoveTemp(LocalTypes)]() mutable
 		{
 			UVoxelChunkComponent* Chunk = WeakChunk.Get();
 			AVoxelWorldActor* Self = WeakSelf.Get();
@@ -382,8 +600,36 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk)
 			{
 				return;
 			}
+			Chunk->ApplyGeneratedData(MoveTemp(Densities), MoveTemp(Types));
 			Chunk->SetState(EChunkState::PendingMesh);
 			Self->PendingMeshQueue.Add(Chunk);
+
+			static const FChunkCoord FaceOffsets[6] = 
+			{
+				FChunkCoord( 1,  0,  0),
+				FChunkCoord(-1,  0,  0),
+				FChunkCoord( 0,  1,  0),
+				FChunkCoord( 0, -1,  0),
+				FChunkCoord( 0,  0,  1),
+				FChunkCoord( 0,  0, -1)
+			};
+			const FChunkCoord CC = Chunk->GetChunkCoord();
+			for (const FChunkCoord& Offset : FaceOffsets)
+			{
+				const FChunkCoord NC(CC.X + Offset.X, CC.Y + Offset.Y, CC.Z + Offset.Z);
+				UVoxelChunkComponent* const* NeighborPtr = Self->Chunks.Find(NC);
+				if (!NeighborPtr || !*NeighborPtr)
+				{
+					continue;
+				}
+				UVoxelChunkComponent* Neighbor = *NeighborPtr;
+				const EChunkState NeighborState = Neighbor->GetState();
+				if (NeighborState == EChunkState::Ready || NeighborState == EChunkState::PendingUpload)
+				{
+					Neighbor->SetState(EChunkState::PendingMesh);
+					Self->PendingMeshQueue.Add(Neighbor);
+				}
+			}
 		});
 	});
 }
@@ -393,39 +639,36 @@ void AVoxelWorldActor::MeshTaskAsync(UVoxelChunkComponent* Chunk)
 	Chunk->SetState(EChunkState::GeneratingMesh);
 	++ActiveMeshTasks;
 
+	TArray<float> Densities(Chunk->GetDensityData(), CHUNK_SAMPLE_COUNT);
+	TArray<uint8> LocalTypes(Chunk->GetVoxelTypeData(), CHUNK_SAMPLE_COUNT);
 	TWeakObjectPtr<UVoxelChunkComponent> WeakChunk(Chunk);
 	TWeakObjectPtr<AVoxelWorldActor> WeakSelf(this);
-	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [WeakChunk, WeakSelf]()
+
+	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [WeakChunk, WeakSelf,
+	Densities = MoveTemp(Densities), Types = MoveTemp(LocalTypes)]()mutable
 	{
-		UVoxelChunkComponent* C = WeakChunk.Get();
-		AVoxelWorldActor* S = WeakSelf.Get();
-		if (!C || !S)
-		{
-			if (S)
-			{
-				--S->ActiveMeshTasks;
-			}
-			return;
-		}
 		FChunkMeshData NewMeshData;
-		FMarchingCubeMesher::MeshChunk(*C, NewMeshData);
-		{
-			FScopeLock Lock(&C->MeshDataMutex);
-			C->PendingMeshData = MoveTemp(NewMeshData);
-		}
-		C->SetState(EChunkState::PendingUpload);
-		--S->ActiveMeshTasks;
-		AsyncTask(ENamedThreads::GameThread, [WeakChunk, WeakSelf]() 
-		{
-			UVoxelChunkComponent* Chunk = WeakChunk.Get();
-			AVoxelWorldActor* Self = WeakSelf.Get();
-			if (!Chunk || !Self)
+		FMarchingCubeMesher::MeshChunk(Densities, Types, NewMeshData);
+		AsyncTask(ENamedThreads::GameThread,
+			[WeakChunk, WeakSelf, MeshData = MoveTemp(NewMeshData)]() mutable
 			{
-				return;
-			}
-			FScopeLock Lock(&Self->UploadQueueMutex);
-			Self->UploadQueue.Add(Chunk);
-		});
+				UVoxelChunkComponent* Chunk = WeakChunk.Get();
+				AVoxelWorldActor* Self = WeakSelf.Get();
+				if (!Chunk || !Self)
+				{
+					--Self->ActiveMeshTasks;
+					return;
+				}
+				{
+					FScopeLock Lock(&Chunk->MeshDataMutex);
+					Chunk->PendingMeshData = MoveTemp(MeshData);
+				}
+				Chunk->SetState(EChunkState::PendingUpload);
+				--Self->ActiveMeshTasks;
+
+				FScopeLock Lock(&Self->UploadQueueMutex);
+				Self->UploadQueue.Add(Chunk);
+			});
 	});
 }
 
@@ -579,6 +822,14 @@ void AVoxelWorldActor::ReplayModificationLog()
 	}
 	LastReplayedIndex = TotalEntries;
 	RemeshDirtyChunks(AllDirtyChunks);
+}
+
+void AVoxelWorldActor::GenerateNewSeed()
+{
+	FRandomStream Stream;
+	Stream.GenerateNewSeed();
+	NoiseSeed = Stream.GetCurrentSeed();
+	bHasGeneratedSeed = true;
 }
 
 void AVoxelWorldActor::OnRep_NoiseSeed()

@@ -32,11 +32,12 @@ class UVoxelChunkComponent;
 class VOXELENGINE_API FMarchingCubeMesher
 {
 public:
-    static void MeshChunk(const UVoxelChunkComponent& Chunk, FChunkMeshData& OutMeshData);
+    static void MeshChunk(const TArray<float>& Densities, const TArray<uint8>& VoxelTypes, FChunkMeshData& OutMeshData, float SkirtDepth = VOXEL_SIZE);
 
 private:
-    static void ProcessCell(const UVoxelChunkComponent& Chunk, int32 CX, int32 CY, int32 CZ, FChunkMeshData& OutMeshData);
-    static FVector ComputeGradient(const UVoxelChunkComponent& Chunk, int32 X, int32 Y, int32 Z);
+    static void ProcessCell(const float* Densities, const uint8* VoxelTypes, int32 CX, int32 CY, int32 CZ, FChunkMeshData& OutMeshData);
+    static void AddSkirts(const float* Densities, const uint8* VoxelTypes, FChunkMeshData& OutMeshData, float SkirtDepth);
+    static FVector ComputeGradient(const float* Densities, int32 X, int32 Y, int32 Z);
 	static FVector InterpolateVertex(const FVector& P1, float D1, const FVector& P2, float D2);
 
     static const FVoxelCoord CornerOffsets[8];
