@@ -68,6 +68,11 @@ public:
 		bOutSuccess = true;
 		return true;
 	}
+	friend FArchive& operator<<(FArchive& Ar, FStat& Stat)
+	{
+		Ar << Stat.CurrentValue;
+		return Ar;
+	}
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats", meta = (AllowPrivateAccess = true))
 	float CurrentValue = 100;
@@ -80,5 +85,8 @@ private:
 template<>
 struct TStructOpsTypeTraits<FStat> : public TStructOpsTypeTraitsBase2<FStat>
 {
-	enum { WithNetSerializer = true };
+	enum 
+	{ 
+		WithNetSerializer = true 
+	};
 };

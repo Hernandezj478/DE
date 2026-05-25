@@ -17,6 +17,14 @@ class INVENTORY_API UInventoryComponent : public UActorComponent, public IInvent
 
 public:
 	UInventoryComponent();
+	float GetCarryWeightPercentile() const 
+	{
+		if (MaxCarryWeight <= 0.f)
+		{
+			return 0.f;
+		}
+		return FMath::Max(0.f, CurrentCarryWeight / MaxCarryWeight);
+	}
 
 protected:
 	// Called when the game starts
@@ -24,7 +32,6 @@ protected:
 	virtual void ResizeInventory();
 	virtual void UpdateWeight();
 	bool UpdateInventorySlotCount(const int32 NewSlots);
-	float GetCarryWeightPercentile() const {return CurrentCarryWeight / MaxCarryWeight;}
 	
 	// Inventory mutable functions
 	// int32 AddItemToInventory(const FItemData& ItemData, const int32 Quantity, const float Durability = -1.f);
@@ -44,7 +51,7 @@ protected:
 	virtual int32 AddItemToSlot_Implementation(const int32& Index, const FName& ItemID, const int32& Quantity, const float& Durability) override;
 	virtual bool TransferItemFromSlot_Implementation(const int32& Index, const int32& Quantity, 
 		const TScriptInterface<IInventoryInterface>& TargetInventory) override;
-	
+	virtual int32 GetAvailableSpace_Implementation(const FName& ItemID, const int32& Quantity) const override;
 	
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true))

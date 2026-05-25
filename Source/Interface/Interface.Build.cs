@@ -18,6 +18,7 @@ public class Interface : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
+                "UtilityFeatures"
             }
         );
     }

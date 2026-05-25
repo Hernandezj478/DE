@@ -7,7 +7,10 @@
 #include "VoxelWorldActor.h"
 #include "Logger.h"
 #include "Net/UnrealNetwork.h"
+#include "SaveGameSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
+const FString ACharacterBase::IDSlotName = TEXT("PlayerID");
 
 // Sets default values
 ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer) : 
@@ -17,8 +20,6 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer) :
 	PrimaryActorTick.bCanEverTick = true;
 	// Enable replication
 	SetReplicates(true);
-	//bReplicates = true;
-	//bAlwaysRelevant = true;
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetMesh()->SetIsReplicated(true);
 	Statline = CreateDefaultSubobject<UStatComponent>(TEXT("Statline"));
@@ -26,6 +27,7 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer) :
 	{
 		LOG_ERROR(LogCharacters, "Statline has not been created/initialized");
 	}
+	PersistentSaveGUID = FGuid::NewGuid();
 }
 
 // Called when the game starts or when spawned
@@ -34,9 +36,14 @@ void ACharacterBase::BeginPlay()
 	Super::BeginPlay();
 }
 
+void ACharacterBase::EndPlay(const EEndPlayReason::Type Reason)
+{
+	Super::EndPlay(Reason);
+}
+
 bool ACharacterBase::CanJumpInternal_Implementation() const
 {
-	return Super::CanJumpInternal_Implementation() && (Statline && Statline->CanJump()) ;
+	return Super::CanJumpInternal_Implementation() && (Statline && Statline->CanJump());
 }
 
 void ACharacterBase::OnJumped_Implementation()
@@ -65,6 +72,46 @@ void ACharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ACharacterBase, bIsSprinting);
 	DOREPLIFETIME(ACharacterBase, bIsRunning);
+	DOREPLIFETIME(ACharacterBase, bIsOverEncumbered);
+}
+
+void ACharacterBase::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (IsPlayerControlled())
+	{
+		// Player registeration deferred - need client to send PersistantSaveGUID via ServerRegisterID
+		return;
+	}
+	if (USaveGameSubsystem* SaveSys = GetWorld()->GetSubsystem<USaveGameSubsystem>())
+	{
+		SaveSys->RegisterSaveable(this);
+	}
+}
+
+void ACharacterBase::UnPossessed()
+{
+	if (HasAuthority())
+	{
+		if (IsPlayerControlled())
+		{
+			if (USaveGameSubsystem* SaveSys = GetWorld()->GetSubsystem<USaveGameSubsystem>())
+			{
+				SaveSys->UnregisterSaveable(this);
+			}
+		}
+	}
+	Super::UnPossessed();
+}
+
+void ACharacterBase::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	InitializeID();
 }
 
 UActorComponent* ACharacterBase::GetCharacterInventory() const
@@ -108,12 +155,26 @@ void ACharacterBase::OnRep_IsRunning()
 	}
 }
 
+void ACharacterBase::OnRep_IsOverEncumbered()
+{
+
+}
+
 void ACharacterBase::Server_DebugAdjustStat_Implementation(const EStatTypes Stat, float Amount)
 {
 	if (Statline)
 	{
 		Statline->AdjustStat(Stat, Amount);
 	}
+}
+
+void ACharacterBase::UpdateEncumberanceState()
+{
+	if (!InventoryComponent)
+	{
+		return;
+	}
+	SetIsOverEncumbered(InventoryComponent->GetCarryWeightPercentile() >= 1.f);
 }
 
 void ACharacterBase::Crouch(bool bClientSimulation)
@@ -195,6 +256,15 @@ bool ACharacterBase::CanRun()
 	return Statline && Statline->CanRun();
 }
 
+float ACharacterBase::GetCarryWeightPercentile() const
+{
+	if (!InventoryComponent)
+	{
+		return 0.f;
+	}
+	return InventoryComponent->GetCarryWeightPercentile();
+}
+
 void ACharacterBase::RequestTerrainDig(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
 {
 	if (!TerrainActor)
@@ -208,6 +278,41 @@ void ACharacterBase::RequestTerrainDig(AVoxelWorldActor* TerrainActor, FVector W
 	else
 	{
 		ServerRequestDig(TerrainActor, WorldCenter, Radius, Strength);
+	}
+}
+
+void ACharacterBase::InitializeID()
+{
+	if (!IsLocallyControlled() || !IsPlayerControlled())
+	{
+		return;
+	}
+	if (UDESaveGame* IDSave = Cast<UDESaveGame>(UGameplayStatics::LoadGameFromSlot(IDSlotName, 0)))
+	{
+		if (IDSave->PlayerGUID.IsValid())
+		{
+			ServerRegisterID(IDSave->PlayerGUID);
+			return;
+		}
+	}
+	FGuid NewGUID = FGuid::NewGuid();
+	UDESaveGame* NewIDSave = Cast<UDESaveGame>(UGameplayStatics::CreateSaveGameObject(UDESaveGame::StaticClass()));
+	NewIDSave->PlayerGUID = NewGUID;
+	UGameplayStatics::SaveGameToSlot(NewIDSave, IDSlotName, 0);
+	ServerRegisterID(NewGUID);
+}
+
+bool ACharacterBase::ServerRegisterID_Validate(FGuid InGUID)
+{
+	return InGUID.IsValid();
+}
+
+void ACharacterBase::ServerRegisterID_Implementation(FGuid InGUID)
+{
+	PersistentSaveGUID = InGUID;
+	if (USaveGameSubsystem* SaveSys = GetWorld()->GetSubsystem<USaveGameSubsystem>())
+	{
+		SaveSys->RegisterSaveable(this);
 	}
 }
 
@@ -249,4 +354,95 @@ bool ACharacterBase::ServerRequestAdd_Validate(AVoxelWorldActor* TerrainActor, F
 void ACharacterBase::ServerRequestAdd_Implementation(AVoxelWorldActor* TerrainActor, FVector WorldCenter, float Radius, float Strength)
 {
 	TerrainActor->AddSphere(WorldCenter, Radius, Strength);
+}
+
+void ACharacterBase::SetIsOverEncumbered(bool NewEncumberance)
+{
+	if (bIsOverEncumbered == NewEncumberance)
+	{
+		return;
+	}
+	bIsOverEncumbered = NewEncumberance;
+	OnRep_IsOverEncumbered();
+}
+
+FName ACharacterBase::GetSaveID_Implementation() const
+{
+	if (!SaveID.IsNone())
+	{
+		return SaveID;
+	}
+	return FName(PersistentSaveGUID.ToString());
+}
+
+bool ACharacterBase::CollectSaveData_Implementation(FEntitySaveRecord& OutRecord) const
+{
+	OutRecord.EntityID = GetSaveID();
+	OutRecord.ActorTransform = GetActorTransform();
+	OutRecord.bWasRuntimeSpawned = bIsRuntimeSpawned;
+	OutRecord.ActorClass = GetClass();
+
+	for (UActorComponent* Component : GetComponents())
+	{
+		if (!IsValid(Component) || !Component->Implements<USaveableInterface>())
+		{
+			continue;
+		}
+		FEntitySaveRecord ComponentRecord;
+		if (ISaveableInterface::Execute_CollectSaveData(Component, ComponentRecord))
+		{
+			FSaveComponentData CompData;
+			CompData.ComponentClass = Component->GetClass();
+			CompData.ByteData = ComponentRecord.CustomData;
+			CompData.RawData = ComponentRecord.RawData;
+			OutRecord.ComponentData.Add(CompData);
+		}
+	}
+	return true;
+}
+
+void ACharacterBase::ApplySaveData_Implementation(const FEntitySaveRecord& Record)
+{
+	if (bIsRuntimeSpawned && SaveID.IsNone())
+	{
+		if (!FGuid::Parse(Record.EntityID.ToString(), PersistentSaveGUID))
+		{
+			LOG_ERROR(LogCharacters, "Failed to parse GUID from EntityID '%s'", *Record.EntityID.ToString());
+			return;
+		}
+	}
+	SetActorTransform(Record.ActorTransform);
+	if (UCharacterMovementComponent* CMC = GetCharacterMovement())
+	{
+		CMC->StopMovementImmediately();
+	}
+
+	for (const FSaveComponentData& CompData : Record.ComponentData)
+	{
+		if (!IsValid(CompData.ComponentClass))
+		{
+			continue;
+		}
+		UActorComponent* FoundComponent = FindComponentByClass(CompData.ComponentClass);
+		if (!IsValid(FoundComponent) || !FoundComponent->Implements<USaveableInterface>())
+		{
+			continue;
+		}
+		FEntitySaveRecord ComponentRecord;
+		ComponentRecord.CustomData = CompData.ByteData;
+		ComponentRecord.RawData = CompData.RawData;
+		ISaveableInterface::Execute_ApplySaveData(FoundComponent, ComponentRecord);
+		ISaveableInterface::Execute_OnPostLoad(FoundComponent);
+	}
+}
+
+void ACharacterBase::OnPreSave_Implementation()
+{
+
+}
+
+void ACharacterBase::OnPostLoad_Implementation()
+{
+	OnRep_IsSprinting();
+	OnRep_IsRunning();
 }

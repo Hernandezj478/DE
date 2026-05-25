@@ -12,6 +12,7 @@ UStatComponent::UStatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
+	CalculateTickRate();
 }
 
 // Called when the game starts
@@ -46,15 +47,46 @@ void UStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	TickStats(DeltaTime);
 }
 
-void UStatComponent::TickStats(const float& DeltaTime)
+void UStatComponent::CalculateTickRate()
+{
+	int DayLengthInMinutes = 60; //EDayLenthToInt(Cast<UDEGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetDayLength());
+	double SatiationTick = (double)1 / ((double)DayLengthInMinutes * (double)DaysToStarvation);
+	double HydrationTick = (double)1 / ((double)DayLengthInMinutes * (double)DaysToDehydration);
+	Satiation.AdjustTick(0 - SatiationTick);
+	Hydration.AdjustTick(0 - HydrationTick);
+}
+
+void UStatComponent::TickStats(const float DeltaTime)
 {
 	TickStamina(DeltaTime);
 	TickHealth(DeltaTime);
+	TickBlood(DeltaTime);
 	TickSatiation(DeltaTime);
 	TickHydration(DeltaTime);
-	TickBlood(DeltaTime);
+	TickFatigue(DeltaTime);
 }
-void UStatComponent::TickStamina(const float& DeltaTime)
+
+void UStatComponent::TickHealth(const float DeltaTime)
+{
+	if (CharacterOwner->HasAuthority())
+	{
+		if (bHasLowBlood)
+		{
+			Health.Adjust(-5.f * DeltaTime);
+			return;
+		}
+		if (bIsStarving || bIsDehydrated)
+		{
+			const float DrainRate = (bIsStarving && bIsDehydrated) ? MaxHealthDrainRate : HealthDrainRate;
+
+			Health.Adjust(-DrainRate * DeltaTime);
+			return;
+		}
+		Health.TickStat(DeltaTime);
+	}
+}
+
+void UStatComponent::TickStamina(const float DeltaTime)
 {
 	// Dehydration or starvation forces exhaustion regardless of stamina value
 	bool bHasAuthority = CharacterOwner->HasAuthority();
@@ -98,27 +130,7 @@ void UStatComponent::TickStamina(const float& DeltaTime)
 	}
 }
 
-void UStatComponent::TickHealth(const float& DeltaTime)
-{
-	if (CharacterOwner->HasAuthority())
-	{
-		if (bHasLowBlood)
-		{
-			Health.Adjust(-5.f * DeltaTime);
-			return;
-		}
-		if (bIsStarving || bIsDehydrated)
-		{
-			const float DrainRate = (bIsStarving && bIsDehydrated) ? MaxHealthDrainRate : HealthDrainRate;
-
-			Health.Adjust(-DrainRate * DeltaTime);
-			return;
-		}
-		Health.TickStat(DeltaTime);
-	}
-}
-
-void UStatComponent::TickBlood(const float& DeltaTime)
+void UStatComponent::TickBlood(const float DeltaTime)
 {
 	if (CharacterOwner->HasAuthority())
 	{
@@ -140,7 +152,7 @@ void UStatComponent::TickBlood(const float& DeltaTime)
 	}
 }
 
-void UStatComponent::TickSatiation(const float& DeltaTime)
+void UStatComponent::TickSatiation(const float DeltaTime)
 {
 	if (CharacterOwner->HasAuthority())
 	{
@@ -158,7 +170,7 @@ void UStatComponent::TickSatiation(const float& DeltaTime)
 	}
 }
 
-void UStatComponent::TickHydration(const float& DeltaTime)
+void UStatComponent::TickHydration(const float DeltaTime)
 {
 	if (CharacterOwner->HasAuthority())
 	{
@@ -177,6 +189,14 @@ void UStatComponent::TickHydration(const float& DeltaTime)
 	}
 }
 
+void UStatComponent::TickFatigue(const float DeltaTime)
+{
+	if (CharacterOwner->HasAuthority())
+	{
+		Fatigue.TickStat(DeltaTime);
+	}
+}
+
 float UStatComponent::GetStatPercentile(const EStatTypes Stat) const
 {
 	switch (Stat)
@@ -185,12 +205,14 @@ float UStatComponent::GetStatPercentile(const EStatTypes Stat) const
 		return Health.Percentile();
 	case EStatTypes::ST_STAMINA:
 		return Stamina.Percentile();
+	case EStatTypes::ST_BLOOD:
+		return Blood.Percentile();
 	case EStatTypes::ST_SATIATION:
 		return Satiation.Percentile();
 	case EStatTypes::ST_HYDRATION:
 		return Hydration.Percentile();
-	case EStatTypes::ST_BLOOD:
-		return Blood.Percentile();
+	case EStatTypes::ST_FATIGUE:
+		return Fatigue.Percentile();
 	}
 	return -1.f;
 }
@@ -275,3 +297,37 @@ void UStatComponent::SetIsExhausted(bool bNewValue)
 	}
 	bIsExhausted = bNewValue;
 }
+
+FName UStatComponent::GetSaveID_Implementation() const
+{
+	return FName("Statline");
+}
+
+bool UStatComponent::CollectSaveData_Implementation(FEntitySaveRecord& OutRecord) const
+{
+	FMemoryWriter Writer(OutRecord.CustomData);
+	Writer << const_cast<FStat&>(Health);
+	Writer << const_cast<FStat&>(Stamina);
+	Writer << const_cast<FStat&>(Blood);
+	Writer << const_cast<FStat&>(Satiation);
+	Writer << const_cast<FStat&>(Hydration);
+	Writer << const_cast<FStat&>(Fatigue);
+	return true;
+}
+
+void UStatComponent::ApplySaveData_Implementation(const FEntitySaveRecord& Record)
+{
+	FMemoryReader Reader(Record.CustomData);
+	Reader << Health;
+	Reader << Stamina;
+	Reader << Blood;
+	Reader << Satiation;
+	Reader << Hydration;
+	Reader << Fatigue;
+}
+
+void UStatComponent::OnPreSave_Implementation()
+{}
+
+void UStatComponent::OnPostLoad_Implementation()
+{}

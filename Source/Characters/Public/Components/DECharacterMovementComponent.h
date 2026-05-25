@@ -86,7 +86,7 @@ public:
 	virtual float GetMaxAcceleration() const override;
 	virtual float GetMaxBrakingDeceleration() const override;
 	virtual float GetMaxSpeed() const override;
-	
+
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
 	virtual void UpdateCharacterStateAfterMovement(float DeltaSeconds) override;
 	
@@ -95,6 +95,8 @@ public:
 	
 	virtual bool CanSprintInCurrentState();
 	virtual bool CanRunInCurrentState();
+
+	float GetWeightSpeedMultiplier() const;
 
 	bool IsSprinting();
 	bool IsRunning();
@@ -113,42 +115,45 @@ protected:
 	virtual void InitializeComponent() override;
 	virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
 private:
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = "true"))
 	float WalkSpeed = 200.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = "true"))
 	float RunSpeed = 300.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = "true"))
 	float SprintSpeed = 500.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = "true"))
 	float CrouchSpeed = 100.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowPrivateAccess = "true"))
 	float ExhaustedSpeed = 80.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement", meta = (AllowedPrivateAccess = "true"))
 	float JumpVelocity = 200.f;
 	/* Momentum & Inertia */
 	// How fast character reaches max speed from standstill (per movement state)
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta=(AllowedPrivateAccess=true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float WalkAcceleration = 10.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float RunAcceleration = 8.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float SprintAcceleration = 5.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float CrouchAcceleration = 12.f;
 	// How fast character stops
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float WalkDeceleration = 35.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float RunDeceleration = 25.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float SprintDeceleration = 15.f; // Sprint bleeds off slower
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float CrouchDeceleration = 40.f;
 
 	// Extra friction applied when sharply changing direction 
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float TurnFriction = 10.f;
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = true))
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Momentum", meta = (AllowedPrivateAccess = "true"))
 	float LandingSpeedBleedAmount = 0.25f;
 
+	// Encumberance speed modifier
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Weight", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float MinWeightSpeedMultiplier = 0.3;
 };

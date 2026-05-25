@@ -39,7 +39,7 @@ private:
 	bool bUseDayNightCycle = true;
 	
 	FTimeData CurrentTime;
-	float DayLengthInMinutes = 10;
+	float DayLengthInMinutes = 60;
 	float TimeDecay = 0;
 	float MinuteLength = 0;
 	

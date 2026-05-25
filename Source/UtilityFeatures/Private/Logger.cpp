@@ -6,3 +6,4 @@ DEFINE_LOG_CATEGORY(LogCoreSystems);
 DEFINE_LOG_CATEGORY(LogUtilityFeatures);
 DEFINE_LOG_CATEGORY(LogEnvironment);
 DEFINE_LOG_CATEGORY(LogVoxelEngine);
+DEFINE_LOG_CATEGORY(LogSaveGameSubsystem);

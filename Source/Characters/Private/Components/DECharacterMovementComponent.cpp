@@ -172,9 +172,18 @@ float UDECharacterMovementComponent::GetMaxAcceleration() const
 	{
 		return Super::GetMaxAcceleration();
 	}
-	if (IsCrouching())	return CrouchAcceleration	* GetMaxSpeed();
-	if (bWantsToSprint) return SprintAcceleration	* GetMaxSpeed();
-	if (bWantsToRun)	return RunAcceleration		* GetMaxSpeed();
+	if (IsCrouching())	
+	{
+		return CrouchAcceleration * GetMaxSpeed();
+	}
+	if (bWantsToSprint) 
+	{
+		return SprintAcceleration * GetMaxSpeed();
+	}
+	if (bWantsToRun)	
+	{
+		return RunAcceleration * GetMaxSpeed();
+	}
 
 	return WalkAcceleration * GetMaxSpeed();
 }
@@ -194,16 +203,17 @@ float UDECharacterMovementComponent::GetMaxBrakingDeceleration() const
 
 float UDECharacterMovementComponent::GetMaxSpeed() const
 {
+	float WeightMultiplier = GetWeightSpeedMultiplier();
 	if (bWantsToSprint)
 	{
-		return SprintSpeed;
+		return SprintSpeed * WeightMultiplier;
 	}
 	if (bWantsToRun)
 	{
-		return RunSpeed;
+		return RunSpeed * WeightMultiplier;
 	}
 	// Default for walk, crouch, etc.
-	return Super::GetMaxSpeed();
+	return Super::GetMaxSpeed() * WeightMultiplier;
 }
 
 void UDECharacterMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
@@ -306,11 +316,8 @@ void UDECharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float R
 
 bool UDECharacterMovementComponent::CanSprintInCurrentState()
 {
-	if (!UpdatedComponent || UpdatedComponent->IsSimulatingPhysics() || GetCurrentAcceleration().IsNearlyZero())
-	{
-		return false;
-	}
-	if (CustomCharacterOwner)
+	if (CustomCharacterOwner &&
+		(UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics() && !GetCurrentAcceleration().IsNearlyZero()))
 	{
 		return CustomCharacterOwner->CanSprint();
 	}
@@ -319,15 +326,21 @@ bool UDECharacterMovementComponent::CanSprintInCurrentState()
 
 bool UDECharacterMovementComponent::CanRunInCurrentState()
 {
-	if (!UpdatedComponent || UpdatedComponent->IsSimulatingPhysics())
+	if (CustomCharacterOwner && (UpdatedComponent && !UpdatedComponent->IsSimulatingPhysics()))
 	{
-		return false;
-	}
-	if (ACharacterBase* Owner = Cast<ACharacterBase>(CharacterOwner))
-	{
-		return Owner->CanRun();
+		return CustomCharacterOwner->CanRun();
 	}
 	return false;
+}
+
+float UDECharacterMovementComponent::GetWeightSpeedMultiplier() const
+{
+	if (!CustomCharacterOwner)
+	{
+		return 1.f;
+	}
+	const float WeightRatio = FMath::Clamp(CustomCharacterOwner->GetCarryWeightPercentile(), 0.f, 1.f);
+	return FMath::Lerp(1.f, MinWeightSpeedMultiplier, WeightRatio);
 }
 
 bool UDECharacterMovementComponent::IsSprinting()

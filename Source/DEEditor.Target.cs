@@ -26,7 +26,8 @@ public class DEEditorTarget : TargetRules
 			"UtilityFeatures", 
 			"MessageHandler", 
 			"Environment",
-			"VoxelEngine"
+			"VoxelEngine",
+			"SaveSystem"
 		});
 	}
 }

@@ -24,7 +24,8 @@ public class Characters : ModuleRules
                 "Inventory",
                 "UtilityFeatures",
                 "MessageHandler",
-                "VoxelEngine"
+                "VoxelEngine",
+                "SaveSystem"
             }
         );
     }

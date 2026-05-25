@@ -26,7 +26,8 @@ public class DETarget : TargetRules
 			"UtilityFeatures", 
 			"MessageHandler", 
 			"Environment",
-			"VoxelEngine"
+			"VoxelEngine",
+			"SaveSystem"
         });
 	}
 }
