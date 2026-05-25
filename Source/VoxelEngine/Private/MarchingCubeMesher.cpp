@@ -310,7 +310,7 @@ const int32 FMarchingCubeMesher::TriTable[256][16] =
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
 
-static int32 GetOrAddVertex(FChunkMeshData& MeshData, const FVector& Position,
+static int32 GetVertex(FChunkMeshData& MeshData, const FVector& Position,
     const FVector& Normal, const FVector2d& UV)
 {
     FIntVector Key(
@@ -357,10 +357,6 @@ void FMarchingCubeMesher::MeshChunk(const TArray<float>& Densities, const TArray
             }
         }
     }
-    /*if (SkirtDepth > 0)
-    {
-        AddSkirts(DensityPtr, VoxelTypePtr, OutMeshData, SkirtDepth);
-    }*/
     OutMeshData.VertexCache.Empty();
 }
 
@@ -496,9 +492,9 @@ void FMarchingCubeMesher::ProcessCell(const float* Densities, const uint8* Voxel
         };
 
         const float UVScale = 1.0f / (CHUNK_SIZE * VOXEL_SIZE);
-        const int32 Idx0 = GetOrAddVertex(OutMeshData, V0, VertexNormal(V0), FVector2D(V0.X * UVScale, V0.Y * UVScale));
-        const int32 Idx1 = GetOrAddVertex(OutMeshData, V1, VertexNormal(V1), FVector2D(V1.X * UVScale, V1.Y * UVScale));
-        const int32 Idx2 = GetOrAddVertex(OutMeshData, V2, VertexNormal(V2), FVector2D(V2.X * UVScale, V2.Y * UVScale));
+        const int32 Idx0 = GetVertex(OutMeshData, V0, VertexNormal(V0), FVector2D(V0.X * UVScale, V0.Y * UVScale));
+        const int32 Idx1 = GetVertex(OutMeshData, V1, VertexNormal(V1), FVector2D(V1.X * UVScale, V1.Y * UVScale));
+        const int32 Idx2 = GetVertex(OutMeshData, V2, VertexNormal(V2), FVector2D(V2.X * UVScale, V2.Y * UVScale));
 
         if (Idx0 == Idx1 || Idx1 == Idx2 || Idx0 == Idx2)
         {
@@ -509,117 +505,6 @@ void FMarchingCubeMesher::ProcessCell(const float* Densities, const uint8* Voxel
         OutMeshData.Triangles.Add(Idx2);
     }
 }
-
-//void FMarchingCubeMesher::AddSkirts(const float* Densities, const uint8* VoxelTypes, FChunkMeshData& OutMeshData, float SkirtDepth)
-//{
-//    const float UVScale = 1.0f / (CHUNK_SIZE * VOXEL_SIZE);
-//    auto GetDensity = [Densities](int32 X, int32 Y, int32 Z) -> float
-//    {
-//        const FVoxelCoord C(
-//            FMath::Clamp(X, 0, CHUNK_SAMPLE_SIZE - 1),
-//            FMath::Clamp(Y, 0, CHUNK_SAMPLE_SIZE - 1),
-//            FMath::Clamp(Z, 0, CHUNK_SAMPLE_SIZE - 1));
-//        return Densities[C.ToIndex()];
-//    };
-//
-//    auto GetVoxelType = [VoxelTypes](int32 X, int32 Y, int32 Z) ->EVoxelType
-//    {
-//        const FVoxelCoord C(X, Y, Z);
-//        if (!C.IsValid())
-//        {
-//            return EVoxelType::Air;
-//        }
-//        return static_cast<EVoxelType>(VoxelTypes[C.ToIndex()]);
-//    };
-//
-//    auto EmitSkirtQuad = [&](const FVector& V0, const FVector& V1, const FVector& OutwardNormal)
-//        {
-//            const FVector V0B = V0 - FVector(0.f, 0.f, SkirtDepth);
-//            const FVector V1B = V1 - FVector(0.f, 0.f, SkirtDepth);
-//            const int32 I0 = GetOrAddVertex(OutMeshData, V0, OutwardNormal,
-//                FVector2D(V0.X * UVScale, V0.Z * UVScale));
-//            const int32 I1 = GetOrAddVertex(OutMeshData, V1, OutwardNormal,
-//                FVector2D(V1.X * UVScale, V1.Z * UVScale));
-//            const int32 I2 = GetOrAddVertex(OutMeshData, V1B, OutwardNormal,
-//                FVector2D(V1B.X * UVScale, V1B.Z * UVScale));
-//            const int32 I3 = GetOrAddVertex(OutMeshData, V0B, OutwardNormal,
-//                FVector2D(V0B.X * UVScale, V0B.Z * UVScale));
-//
-//            if (I0 == I1 || I1 == I2 || I0 == I2)
-//            {
-//                return;
-//            }
-//            if (I0 == I3 || I2 == I3)
-//            {
-//                return;
-//            }
-//            OutMeshData.Triangles.Add(I0);
-//            OutMeshData.Triangles.Add(I1);
-//            OutMeshData.Triangles.Add(I2);
-//
-//            OutMeshData.Triangles.Add(I0);
-//            OutMeshData.Triangles.Add(I2);
-//            OutMeshData.Triangles.Add(I3);
-//    };
-//    {
-//        const int32 CX = CHUNK_SIZE - 1;
-//        const FVector OutwardNormal(1.f, 0.f, 0.f);
-//        for (int32 CZ = 0; CZ < CHUNK_SIZE; CZ++)
-//        {
-//            for (int32 CY = 0; CY < CHUNK_SIZE; CY++)
-//            {
-//                const float D0 = GetDensity(CHUNK_SIZE, CY, CZ);
-//                const float D1 = GetDensity(CHUNK_SIZE, CY, CZ + 1);
-//                const float DY = GetDensity(CHUNK_SIZE, CY + 1, CZ);
-//
-//                if ((D0 < ISO_LEVEL) != (D1 < ISO_LEVEL))
-//                {
-//                    const FVector P0(CHUNK_SIZE * VOXEL_SIZE, CY * VOXEL_SIZE, CZ * VOXEL_SIZE);
-//                    const FVector P1(CHUNK_SIZE * VOXEL_SIZE, CY * VOXEL_SIZE, (CZ + 1) * VOXEL_SIZE);
-//                    const FVector SV = InterpolateVertex(P0, D0, P1, D1);
-//
-//                    if ((DY < ISO_LEVEL) != (D0 < ISO_LEVEL))
-//                    {
-//                        const FVector PY(CHUNK_SIZE * VOXEL_SIZE, (CY + 1) * VOXEL_SIZE, CZ * VOXEL_SIZE);
-//                        const FVector SVY = InterpolateVertex(P0, D0, PY, DY);
-//
-//                        const EVoxelType T0 = (D0 < ISO_LEVEL) ? GetVoxelType(CHUNK_SIZE - 1, CY, CZ) : GetVoxelType(CHUNK_SIZE - 1, CY, CZ + 1);
-//                        EmitSkirtQuad(SV, SVY, OutwardNormal);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    {
-//        const int32 CY = CHUNK_SIZE - 1;
-//        const FVector OutwardNormal(0.f, 1.f, 0.f);
-//        for (int32 CZ = 0; CZ < CHUNK_SIZE; CZ++)
-//        {
-//            for (int32 CX = 0; CX < CHUNK_SIZE; CX++)
-//            {
-//                const float D0 = GetDensity(CX, CHUNK_SIZE, CZ);
-//                const float D1 = GetDensity(CX, CHUNK_SIZE, CZ + 1);
-//                const float DX = GetDensity(CX + 1, CHUNK_SIZE, CZ);
-//
-//                if ((D0 < ISO_LEVEL) != (D1 < ISO_LEVEL))
-//                {
-//                    const FVector P0(CX * VOXEL_SIZE, CHUNK_SIZE * VOXEL_SIZE, CZ * VOXEL_SIZE);
-//                    const FVector P1(CX * VOXEL_SIZE, CHUNK_SIZE * VOXEL_SIZE, (CZ + 1) * VOXEL_SIZE);
-//                    const FVector SV = InterpolateVertex(P0, D0, P1, D1);
-//
-//                    if ((DX < ISO_LEVEL) != (D0 < ISO_LEVEL))
-//                    {
-//                        const FVector PX((CX + 1) * VOXEL_SIZE, CHUNK_SIZE * VOXEL_SIZE, CZ * VOXEL_SIZE);
-//                        const FVector SVX = InterpolateVertex(P0, D0, PX, DX);
-//
-//                        const EVoxelType T0 = (D0 < ISO_LEVEL) ? GetVoxelType(CX, CHUNK_SIZE - 1, CZ) : GetVoxelType(CX, CHUNK_SIZE - 1, CZ + 1);
-//                        EmitSkirtQuad(SV, SVX, OutwardNormal);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
 
 FVector FMarchingCubeMesher::InterpolateVertex(const FVector & P1, float D1, const FVector & P2, float D2)
 {

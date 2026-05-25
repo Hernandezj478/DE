@@ -36,7 +36,6 @@ public:
 
 private:
     static void ProcessCell(const float* Densities, const uint8* VoxelTypes, int32 CX, int32 CY, int32 CZ, FChunkMeshData& OutMeshData);
-    static void AddSkirts(const float* Densities, const uint8* VoxelTypes, FChunkMeshData& OutMeshData, float SkirtDepth);
     static FVector ComputeGradient(const float* Densities, int32 X, int32 Y, int32 Z);
 	static FVector InterpolateVertex(const FVector& P1, float D1, const FVector& P2, float D2);
 

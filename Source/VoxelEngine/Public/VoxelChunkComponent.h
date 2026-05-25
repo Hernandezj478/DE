@@ -11,6 +11,7 @@ enum class EChunkState : uint8
 {
 	Uninitialized,
 	GeneratingDensity,
+	DensityReady,
 	PendingMesh,
 	GeneratingMesh,
 	PendingUpload,
@@ -35,20 +36,49 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	FORCEINLINE const FChunkCoord& GetChunkCoord() const { return ChunkCoord; }
-	FORCEINLINE FVector GetChunkWorldOrigin() const { return ChunkCoord.ToWorldPosition(); }
+	FORCEINLINE const FChunkCoord& GetChunkCoord() const 
+	{
+		return ChunkCoord; 
+	}
+	FORCEINLINE FVector GetChunkWorldOrigin() const 
+	{
+		return ChunkCoord.ToWorldPosition(); 
+	}
 
 	void SetState(EChunkState NewState){ State = NewState; }
 	void MarkDirty()				   { State = EChunkState::Dirty; }
 
 	UFUNCTION(BlueprintPure, Category = "Voxel Chunk")
-	EChunkState GetState() const{ return State; }
-	bool IsReady() const		{ return State == EChunkState::Ready; }
-	bool IsDirty() const		{ return State == EChunkState::Dirty; }
-	bool IsGenerating() const	{ return State == EChunkState::GeneratingDensity 
-									  || State == EChunkState::GeneratingMesh; }
-	bool NeedsUpload() const	{ return State == EChunkState::PendingUpload; }
-	bool NeedsMesh() const		{ return State == EChunkState::PendingMesh; }
+	EChunkState GetState() const
+	{ 
+		return State; 
+	}
+	bool IsReady() const		
+	{
+		return State == EChunkState::Ready; 
+	}
+	bool IsDirty() const		
+	{ 
+		return State == EChunkState::Dirty; 
+	}
+	bool IsGenerating() const	
+	{ 
+		return 
+			State == EChunkState::GeneratingDensity 
+		 || State == EChunkState::GeneratingMesh; 
+	}
+	bool NeedsUpload() const	
+	{ 
+		return State == EChunkState::PendingUpload; 
+	}
+	bool NeedsMesh() const		
+	{
+		return State == EChunkState::PendingMesh; 
+	}
+	bool HasDensityData() const 
+	{ 
+		return static_cast<int>(State) > static_cast<int>(EChunkState::GeneratingDensity); 
+	}
 
 	FORCEINLINE float GetDensity(const FVoxelCoord& LocalCoord) const
 	{
@@ -76,8 +106,14 @@ public:
 	{
 		SetDensity(FVoxelCoord(X, Y, Z), Value);
 	}
-	FORCEINLINE float* GetDensityData() { return Densities.GetData(); }
-	FORCEINLINE const float* GetDensityData() const { return Densities.GetData(); }
+	FORCEINLINE float* GetDensityData() 
+	{ 
+		return Densities.GetData(); 
+	}
+	FORCEINLINE const float* GetDensityData() const 
+	{ 
+		return Densities.GetData(); 
+	}
 
 	FORCEINLINE EVoxelType GetVoxelType(const FVoxelCoord& C) const
 	{
@@ -109,7 +145,7 @@ public:
 	FORCEINLINE const uint8* GetVoxelTypeData() const { return VoxelTypes.GetData(); }
 
 	void ApplyGeneratedData(TArray<float>&& InDensities, TArray<uint8>&& InVoxelTypes);
-
+	void ClearMesh();
 	void FillDensity(float value);
 	void UploadMesh(UMaterialInterface* TerrainMaterial);
 

@@ -144,6 +144,21 @@ void AVoxelWorldActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	ProcessPendingMeshQueue();
 	ProcessUploadQueue();
+	ProcessPendingChunkCreations();
+	UWorld* World = GetWorld();
+	if (!World) return;
+	FVector ObserverPos = GetActorLocation();
+	if (World->IsGameWorld())
+	{
+		if (APlayerController* PC = World->GetFirstPlayerController())
+		{
+			if (APawn* Pawn = PC->GetPawnOrSpectator())
+			{
+				ObserverPos = Pawn->GetActorLocation();
+			}
+		}
+	}
+	UpdateStreaming(ObserverPos);
 }
 
 void AVoxelWorldActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -208,6 +223,284 @@ void AVoxelWorldActor::RegenerateSeed()
 	RebuildTerrain();
 }
 
+void AVoxelWorldActor::UpdateStreaming(FVector ObserverPosition)
+{
+	const float ThresholdSq = FMath::Square(CHUNK_WORLD_SIZE * StreamingUpdateThreshold);
+	if (FVector::DistSquared(ObserverPosition, LastStreamPosition) < ThresholdSq)
+	{
+		return;
+	}
+	
+	const FChunkCoord ObsCC = GetObserverChunkCoord(ObserverPosition);
+	if (ObsCC == LastObserverChunkCoord)
+	{
+		LastStreamPosition = ObserverPosition;
+		return;
+	}
+
+	LastStreamPosition = ObserverPosition;
+	LastObserverChunkCoord = ObsCC;
+
+	const int32 OuterXY = InnerRadiusExtent + OuterRadiusExtent;
+	const int32 OuterZ = ViewDistanceZ + OuterRadiusExtent;
+
+	TSet<FChunkCoord> DesiredChunks;
+	DesiredChunks.Reserve((OuterXY * 2 + 1) * (OuterXY * 2 + 1) * (OuterXY * 2 + 1));
+
+	for (int32 DZ = -OuterZ; DZ <= OuterZ; DZ++) 
+	{
+		for (int32 DY = -OuterXY; DY <= OuterXY; DY++)
+		{
+			for (int32 DX = -OuterXY; DX <= OuterXY; DX++)
+			{
+				DesiredChunks.Add(FChunkCoord(ObsCC.X + DX, ObsCC.Y + DY, ObsCC.Z + DZ));
+			}
+		}
+	}
+	TArray<FChunkCoord> ToDestroy;
+	for (const TPair<FChunkCoord, UVoxelChunkComponent*>& Pair : Chunks)
+	{
+		if (!DesiredChunks.Contains(Pair.Key))
+		{
+			ToDestroy.Add(Pair.Key);
+		}
+	}
+	for (const FChunkCoord& CC : ToDestroy)
+	{
+		DestroyChunk(CC);
+	}
+	PendingChunkCreations.RemoveAll([&](const TPair<float, FChunkCoord>& Entry)
+		{
+			return !DesiredChunks.Contains(Entry.Value);
+		});
+
+	for (const FChunkCoord& CC : DesiredChunks)
+	{
+		const int32 ChebXY = FMath::Max(FMath::Abs(CC.X - ObsCC.X), FMath::Abs(CC.Y - ObsCC.Y));
+		const int32 ChebZ = FMath::Abs(CC.Z - ObsCC.Z);
+		const bool bInner = (ChebXY <= InnerRadiusExtent && ChebZ <= ViewDistanceZ);
+
+		UVoxelChunkComponent** ExistingPtr = Chunks.Find(CC);
+		if (!ExistingPtr || !*ExistingPtr)
+		{
+			const bool bAlreadyQueued = PendingChunkCreations.ContainsByPredicate([&CC](const TPair<float, FChunkCoord>& E)
+			{
+				return E.Value == CC;
+			});
+			if (!bAlreadyQueued)
+			{
+				const float DistSq = static_cast<float>(
+					(CC.X - ObsCC.X) * (CC.X - ObsCC.X) +
+					(CC.Y - ObsCC.Y) * (CC.Y - ObsCC.Y) +
+					(CC.Z - ObsCC.Z) * (CC.Z - ObsCC.Z));
+				PendingChunkCreations.Add({ DistSq, CC });
+			}
+		}
+		else
+		{
+			UVoxelChunkComponent* Chunk = *ExistingPtr;
+			const EChunkState S = Chunk->GetState();
+			if (bInner && S == EChunkState::DensityReady)
+			{
+				Chunk->SetState(EChunkState::PendingMesh);
+				PendingMeshQueue.Add(Chunk);
+			}
+			else if(!bInner && (S == EChunkState::Ready || S == EChunkState::Dirty))
+			{
+				Chunk->ClearMesh();
+			}
+		}
+	}
+	PendingChunkCreations.Sort([](const TPair<float, FChunkCoord>& A, const TPair<float, FChunkCoord>& B)
+	{
+		return A.Key < B.Key;
+	});
+}
+
+void AVoxelWorldActor::BuildFarTerrain()
+{
+	if (bFarTerrainBuilding.Load())
+	{
+		return;
+	}
+	bFarTerrainBuilding = true;
+	if (!FarTerrainMesh)
+	{
+		FarTerrainMesh = NewObject<UProceduralMeshComponent>(this, TEXT("FarTerrainMesh"));
+		FarTerrainMesh->SetupAttachment(GetRootComponent());
+		FarTerrainMesh->RegisterComponent();
+		FarTerrainMesh->SetCanEverAffectNavigation(false);
+		FarTerrainMesh->bUseAsyncCooking = false;
+		FarTerrainMesh->bUseComplexAsSimpleCollision = false;
+	}
+	const int32 Res = FMath::Max(4, FarTerrainResolution);
+	const float Extent = FarTerrainRadius;
+	const float Step = (Extent * 2.f) / static_cast<float>(Res);
+	const FVector ActorLoc = GetActorLocation();
+	const float InnerExclusionRadius = (InnerRadiusExtent /*+ OuterRadiusExtent*/) * CHUNK_WORLD_SIZE;
+	const EVoxelTerrainSource Source = TerrainSource;
+	const float CapturedFreq = NoiseFrequency;
+	const float CapturedAmp = NoiseAmplitude;
+	const float CapturedSurface = SurfaceLevel;
+	const int32 CapturedSeed = NoiseSeed;	
+	UMaterialInterface* Material = FarTerrainMaterial;
+
+	TArray<float> CapturedHeights;
+	int32 HMWidth = 0;
+	int32 HMHeight = 0;
+	float HMMin = 0.f;
+	float HMMax = 32.f;
+	bool bUseHM = false;
+
+	if (Source == EVoxelTerrainSource::Heightmap && HeightmapProcessor && HeightmapProcessor->IsLoaded())
+	{
+		HMWidth = HeightmapProcessor->GetImageWidth();
+		HMHeight = HeightmapProcessor->GetImageHeight();
+		HMMin = HeightmapProcessor->MinHeightVoxels;
+		HMMax = HeightmapProcessor->MaxHeightVoxels;
+		bUseHM = true;
+
+		CapturedHeights.SetNumUninitialized(HMWidth * HMHeight);
+		for (int32 PY = 0; PY < HMHeight; PY++)
+		{
+			for (int32 PX = 0; PX < HMWidth; PX++)
+			{
+				CapturedHeights[PY * HMWidth + PX] = HeightmapProcessor->GetNormalizedValue(PX, PY);
+			}
+		}
+	}
+	TWeakObjectPtr<AVoxelWorldActor> WeakSelf(this);
+	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,
+	[WeakSelf, Res, Extent, Step, ActorLoc, InnerExclusionRadius,
+	Source, CapturedFreq, CapturedAmp, CapturedSurface, CapturedSeed,
+	Material, bUseHM, HMWidth, HMHeight, HMMin, HMMax,
+	Heights = MoveTemp(CapturedHeights)]() mutable
+	{
+		const int32 Stride = Res + 1;
+		auto HMSampleClamped = [&Heights, HMWidth, HMHeight](int32 PX, int32 PY) -> float
+		{
+			PX = FMath::Clamp(PX, 0, HMWidth - 1);
+			PY = FMath::Clamp(PY, 0, HMHeight - 1);
+			return Heights[PY * HMWidth + PX];
+		};
+		auto HMSampleBilinear = [&HMSampleClamped](float FX, float FY) -> float
+		{
+			const int32 X0 = static_cast<int32>(FX);
+			const int32 Y0 = static_cast<int32>(FY);
+			const float TX = FX - X0;
+			const float TY = FY - Y0;
+			return FMath::Lerp(
+				FMath::Lerp(HMSampleClamped(X0, Y0), HMSampleClamped(X0 + 1, Y0), TX),
+				FMath::Lerp(HMSampleClamped(X0, Y0 + 1), HMSampleClamped(X0 + 1, Y0 + 1), TX),
+				TY);
+		};
+		auto SampleHeight = [&](float WX, float WY) -> float
+		{
+			if (bUseHM && Heights.Num() > 0)
+			{
+				const float HalfW = HMWidth * VOXEL_SIZE * 0.5f;
+				const float HalfH = HMHeight * VOXEL_SIZE * 0.5f;
+				const float FX = (WX + HalfW) / VOXEL_SIZE;
+				const float FY = (WY + HalfW) / VOXEL_SIZE;
+				const float T = HMSampleBilinear(FX, FY);
+				return FMath::Lerp(HMMin, HMMax, T);
+			}
+			const float N = FBM(WX * CapturedFreq, WY * CapturedFreq, 0.f, CapturedSeed, 4, 1.f, 1.f, 2.f, 0.5f);
+			return CapturedSurface + N * CapturedAmp;
+		};
+		TArray<FVector> Vertices;
+		TArray<int32> Triangles;
+		TArray<FVector> Normals;
+		TArray<FVector2D> UVs;
+		TArray<FColor> Colors;
+
+		Vertices.Reserve(Stride * Stride);
+		Triangles.Reserve(Stride * Stride * 6);
+		Normals.Reserve(Stride * Stride);
+		UVs.Reserve(Stride * Stride);
+
+		for (int32 Row = 0; Row <= Res; Row++)
+		{
+			for (int32 Col = 0; Col <= Res; Col++)
+			{
+				const float LocalX = -Extent + Col * Step;
+				const float LocalY = -Extent + Row * Step;
+				const float WorldX = ActorLoc.X + LocalX;
+				const float WorldY = ActorLoc.Y + LocalY;
+
+				const float SurfaceH = SampleHeight(WorldX, WorldY);
+				const float WorldZ = SurfaceH * VOXEL_SIZE;
+				const float LocalZ = WorldZ - ActorLoc.Z;
+
+				Vertices.Add(FVector(LocalX, LocalY, LocalZ));
+				UVs.Add(FVector2D(static_cast<float>(Col) / Res, static_cast<float>(Row) / Res));
+				Normals.Add(FVector(0.f, 0.f, 1.f));
+				Colors.Add(FColor::White);
+			}
+		}
+		for (int32 Row = 0; Row < Res; Row++)
+		{
+			for (int32 Col = 0; Col < Res; Col++)
+			{
+				const float CX = -Extent + (Col + 0.5f) * Step;
+				const float CY = -Extent + (Row + 0.5f) * Step;
+
+				if (FMath::Max(FMath::Abs(CX), FMath::Abs(CY)) < InnerExclusionRadius)
+				{
+					continue;
+				}
+				const int32 I00 = Row * Stride + Col;
+				const int32 I10 = Row * Stride + Col + 1;
+				const int32 I01 = (Row + 1) * Stride + Col;
+				const int32 I11 = (Row + 1) * Stride + Col + 1;
+
+				Triangles.Add(I00);
+				Triangles.Add(I01);
+				Triangles.Add(I10);
+				Triangles.Add(I10);
+				Triangles.Add(I01);
+				Triangles.Add(I11);
+			}
+		}
+		for (int32 Row = 1; Row < Res; Row++)
+		{
+			for (int32 Col = 1; Col < Res; Col++)
+			{
+				const int32 I = Row * Stride + Col;
+				const FVector& V = Vertices[I];
+				const FVector& VX = Vertices[Row * Stride + Col + 1];
+				const FVector& VY = Vertices[(Row + 1) * Stride + Col];
+				const FVector N = FVector::CrossProduct(VX - V, VY - V).GetSafeNormal();
+				if (!N.IsNearlyZero())
+				{
+					Normals[I] = N;
+				}
+			}
+		}
+		AsyncTask(ENamedThreads::GameThread,
+		[WeakSelf, Material,
+		Verts = MoveTemp(Vertices),
+		Tris = MoveTemp(Triangles),
+		Norms = MoveTemp(Normals),
+		UVData = MoveTemp(UVs),
+		ColData = MoveTemp(Colors)]() mutable
+		{
+			AVoxelWorldActor* Self = WeakSelf.Get();
+			if (!Self || !Self->FarTerrainMesh)
+			{
+				return;
+			}
+			Self->FarTerrainMesh->CreateMeshSection(
+			0, Verts, Tris, Norms, UVData, ColData, TArray<FProcMeshTangent>(), false);
+			if (Material)
+			{
+				Self->FarTerrainMesh->SetMaterial(0, Material);
+			}
+			Self->bFarTerrainBuilding = false;
+		});
+	});
+}
+
 void AVoxelWorldActor::DigSphere(FVector WorldCenter, float Radius, float Strength)
 {
 	const FVoxelModification Mod(EVoxelOpType::DigSphere, WorldCenter, Radius, Strength);
@@ -253,26 +546,99 @@ void AVoxelWorldActor::MulticastApplyAdd_Implementation(FVector WorldCenter, flo
 	++LastReplayedIndex;
 }
 
+FChunkCoord AVoxelWorldActor::GetObserverChunkCoord(const FVector& ObserverPosition) const
+{
+	return FChunkCoord::FromWorldPosition(ObserverPosition);
+}
+
+void AVoxelWorldActor::ProcessPendingChunkCreations()
+{
+	if (PendingChunkCreations.IsEmpty())
+	{
+		return;
+	}
+	const FChunkCoord ObsCC = LastObserverChunkCoord;
+	int32 Created = 0;
+	while (!PendingChunkCreations.IsEmpty() && Created < MaxChunkCreatesPerTick)
+	{
+		const TPair<float, FChunkCoord> Entry = PendingChunkCreations[0];
+		PendingChunkCreations.RemoveAt(0, 1, EAllowShrinking::No);
+		const FChunkCoord& CC = Entry.Value;
+		if (Chunks.Contains(CC))
+		{
+			continue;
+		}
+		const int32 ChebXY = FMath::Max(FMath::Abs(CC.X - ObsCC.X), FMath::Abs(CC.Y - ObsCC.Y));
+		const int32 ChebZ = FMath::Abs(CC.Z - ObsCC.Z);
+		const bool bInner = (ChebXY <= InnerRadiusExtent && ChebZ <= ViewDistanceZ);
+		UpdateChunk(CC, bInner);
+		Created++;
+	}
+}
+
+UVoxelChunkComponent* AVoxelWorldActor::UpdateChunk(const FChunkCoord& Coord, bool bInnerZone)
+{
+	if (UVoxelChunkComponent** Found = Chunks.Find(Coord))
+	{
+		return *Found;
+	}
+	UVoxelChunkComponent* Chunk = CreateChunk(Coord);
+	const FChunkCoord ObsCC = GetObserverChunkCoord(LastStreamPosition);
+	const int32 ChebXY = FMath::Max(FMath::Abs(Coord.X - ObsCC.X), FMath::Abs(Coord.Y - ObsCC.Y));
+	const int32 LODLevel = (ChebXY <= 1) ? 0 : (ChebXY <= 3) ? 1 : 2;
+	DensityTaskAsync(Chunk, LODLevel, bInnerZone);
+	return Chunk;
+}
+
+void AVoxelWorldActor::DestroyChunk(const FChunkCoord& Coord)
+{
+	UVoxelChunkComponent** Found = Chunks.Find(Coord);
+	if (!Found || !*Found)
+	{
+		return;
+	}
+	UVoxelChunkComponent* Chunk = *Found;
+	if (UProceduralMeshComponent* Mesh = Chunk->GetMeshComponent())
+	{
+		Mesh->DestroyComponent();
+	}
+	Chunk->DestroyComponent();
+	Chunks.Remove(Coord);
+}
+
 void AVoxelWorldActor::CreateChunkGrid()
 {
-	const FChunkCoord ActorChunkCoord = FChunkCoord::FromWorldPosition(GetActorLocation());
-	for (int32 CZ = -ViewDistanceZ; CZ <= ViewDistanceZ; CZ++)
+	const FVector InitialPos = GetActorLocation();
+	const FChunkCoord ObsCC = GetObserverChunkCoord(InitialPos);
+	const int32 OuterXY = InnerRadiusExtent + OuterRadiusExtent;
+	const int32 OuterZ = ViewDistanceZ + OuterRadiusExtent;
+	PendingChunkCreations.Empty();
+	PendingChunkCreations.Reserve((OuterXY * 2 + 1) * (OuterXY * 2 + 1) * (OuterZ * 2 + 1));
+	//const FChunkCoord ActorChunkCoord = FChunkCoord::FromWorldPosition(GetActorLocation());
+	for (int32 DZ = -OuterZ; DZ <= OuterZ; DZ++)
 	{
-		for (int32 CY = -ViewDistanceXY; CY <= ViewDistanceXY; CY++)
+		for (int32 DY = -OuterXY; DY <= OuterXY; DY++)
 		{
-			for (int32 CX = -ViewDistanceXY; CX <= ViewDistanceXY; CX++)
+			for (int32 DX = -OuterXY; DX <= OuterXY; DX++)
 			{
-				const FChunkCoord Coord(
-					ActorChunkCoord.X + CX, 
-					ActorChunkCoord.Y + CY, 
-					ActorChunkCoord.Z + CZ + SurfaceChunkZ);
-				UVoxelChunkComponent* Chunk = CreateChunk(Coord);
-				const int32 ChebDist = FMath::Max3(FMath::Abs(CX), FMath::Abs(CY), FMath::Abs(CZ));
-				const int32 LODLevel = (ChebDist <= 1) ? 0 : (ChebDist <= 3) ? 1 : 2;
-				DensityTaskAsync(Chunk, LODLevel);
+				const FChunkCoord Coord(ObsCC.X + DX, ObsCC.Y + DY, ObsCC.Z + DZ);
+				const float DistSq = static_cast<float>(DX * DX + DY * DY + DZ * DZ);
+				PendingChunkCreations.Add({ DistSq, Coord });
+				//UVoxelChunkComponent* Chunk = CreateChunk(Coord);
+				//const int32 ChebXY = FMath::Max(FMath::Abs(CX), FMath::Abs(CY));
+				//const int32 ChebZ = FMath::Abs(CZ);
+				//const bool bInner = (ChebXY <= InnerRadiusExtent && ChebZ <= ViewDistanceZ);
 			}
 		}
 	}
+	PendingChunkCreations.Sort([](const TPair<float, FChunkCoord>& A, const TPair<float, FChunkCoord>& B)
+	{
+		return A.Key < B.Key;
+	});
+	LastObserverChunkCoord = ObsCC;
+	LastStreamPosition = InitialPos;
+	//BuildFarTerrain();
+	bTerrainBuilt = true;
 }
 
 void AVoxelWorldActor::DestroyChunkGrid()
@@ -306,8 +672,9 @@ UVoxelChunkComponent* AVoxelWorldActor::CreateChunk(const FChunkCoord& Coord)
 	return NewChunk;
 }
 
-void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLevel)
+void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLevel, bool bInnerZone)
 {
+	LOG_MSG(DEBUG, "Calculating Density");
 	Chunk->SetState(EChunkState::GeneratingDensity);
 
 	TArray<FCapturedTypeRule> CapturedRules;
@@ -403,42 +770,42 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLe
 	TWeakObjectPtr<AVoxelWorldActor> WeakSelf(this);
 
 	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,
-		[=, Rules = MoveTemp(CapturedRules), Heights = MoveTemp(CapturedHeights),
-		OreMinD = OreMinDepthGlobal, OreMaxD = OreMaxDepthGlobal]() mutable
-		{
-			TArray<float> LocalDensities;
-			TArray<uint8> LocalTypes;
-			LocalDensities.SetNumUninitialized(CHUNK_SAMPLE_COUNT);
-			LocalTypes.SetNumUninitialized(CHUNK_SAMPLE_COUNT);
+	[=, Rules = MoveTemp(CapturedRules), Heights = MoveTemp(CapturedHeights),
+	OreMinD = OreMinDepthGlobal, OreMaxD = OreMaxDepthGlobal]() mutable
+	{
+		TArray<float> LocalDensities;
+		TArray<uint8> LocalTypes;
+		LocalDensities.SetNumUninitialized(CHUNK_SAMPLE_COUNT);
+		LocalTypes.SetNumUninitialized(CHUNK_SAMPLE_COUNT);
 
-			TArray<float> SurfaceHeightCache;
-			SurfaceHeightCache.SetNumUninitialized(CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE);
+		TArray<float> SurfaceHeightCache;
+		SurfaceHeightCache.SetNumUninitialized(CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE);
 
-			auto HMSampleClamped = [&Heights, CapturedHMWidth, CapturedHMHeight](int32 PX, int32 PY) -> float
-				{
-					PX = FMath::Clamp(PX, 0, CapturedHMWidth - 1);
-					PY = FMath::Clamp(PY, 0, CapturedHMHeight - 1);
-					return Heights[PY * CapturedHMWidth + PX];
-				};
+		auto HMSampleClamped = [&Heights, CapturedHMWidth, CapturedHMHeight](int32 PX, int32 PY) -> float
+			{
+				PX = FMath::Clamp(PX, 0, CapturedHMWidth - 1);
+				PY = FMath::Clamp(PY, 0, CapturedHMHeight - 1);
+				return Heights[PY * CapturedHMWidth + PX];
+			};
 
-			auto HMSampleBilinear = [&HMSampleClamped](float FX, float FY) -> float
-				{
-					const int32 X0 = static_cast<int32>(FX);
-					const int32 Y0 = static_cast<int32>(FY);
-					const float TX = FX - X0;
-					const float TY = FY - Y0;
-					return FMath::Lerp(
-						FMath::Lerp(HMSampleClamped(X0, Y0), HMSampleClamped(X0 + 1, Y0), TX),
-						FMath::Lerp(HMSampleClamped(X0, Y0 + 1), HMSampleClamped(X0 + 1, Y0 + 1), TX),
-						TY);
-				};
-			auto HMGetHeightAtWorld = [&](float WX, float WY, float OriginX, float OriginY) -> float
-				{
-					const float FX = (WX - OriginX) / VOXEL_SIZE;
-					const float FY = (WY - OriginY) / VOXEL_SIZE;
-					const float T = HMSampleBilinear(FX, FY);
-					return FMath::Lerp(CapturedHMMin, CapturedHMMax, T);
-				};
+		auto HMSampleBilinear = [&HMSampleClamped](float FX, float FY) -> float
+			{
+				const int32 X0 = static_cast<int32>(FX);
+				const int32 Y0 = static_cast<int32>(FY);
+				const float TX = FX - X0;
+				const float TY = FY - Y0;
+				return FMath::Lerp(
+					FMath::Lerp(HMSampleClamped(X0, Y0), HMSampleClamped(X0 + 1, Y0), TX),
+					FMath::Lerp(HMSampleClamped(X0, Y0 + 1), HMSampleClamped(X0 + 1, Y0 + 1), TX),
+					TY);
+			};
+		auto HMGetHeightAtWorld = [&](float WX, float WY, float OriginX, float OriginY) -> float
+			{
+				const float FX = (WX - OriginX) / VOXEL_SIZE;
+				const float FY = (WY - OriginY) / VOXEL_SIZE;
+				const float T = HMSampleBilinear(FX, FY);
+				return FMath::Lerp(CapturedHMMin, CapturedHMMax, T);
+			};
 		auto ApplyCaves = [](float SurfDensity, float CaveNoise3D, float CarveThreshold, float DepthThreshold) -> float
 			{
 				if (SurfDensity >= -DepthThreshold) 
@@ -455,7 +822,6 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLe
 
 		if (bUseHeightmap && Heights.Num() > 0)
 		{
-			
 			const float HalfW = CapturedHMWidth * VOXEL_SIZE * 0.5f;
 			const float HalfH = CapturedHMHeight * VOXEL_SIZE * 0.5f;
 			const float OriginX = -HalfW;
@@ -589,10 +955,10 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLe
 			}
 		}
 
-
 		AsyncTask(ENamedThreads::GameThread, [WeakChunk, WeakSelf,
 		Densities = MoveTemp(LocalDensities),
-		Types = MoveTemp(LocalTypes)]() mutable
+		Types = MoveTemp(LocalTypes),
+		bIsInner = bInnerZone]() mutable
 		{
 			UVoxelChunkComponent* Chunk = WeakChunk.Get();
 			AVoxelWorldActor* Self = WeakSelf.Get();
@@ -601,8 +967,15 @@ void AVoxelWorldActor::DensityTaskAsync(UVoxelChunkComponent* Chunk, int32 LODLe
 				return;
 			}
 			Chunk->ApplyGeneratedData(MoveTemp(Densities), MoveTemp(Types));
-			Chunk->SetState(EChunkState::PendingMesh);
-			Self->PendingMeshQueue.Add(Chunk);
+			if (bIsInner)
+			{
+				Chunk->SetState(EChunkState::PendingMesh);
+				Self->PendingMeshQueue.Add(Chunk);
+			}
+			else
+			{
+				Chunk->SetState(EChunkState::DensityReady);
+			}
 
 			static const FChunkCoord FaceOffsets[6] = 
 			{
@@ -709,6 +1082,18 @@ void AVoxelWorldActor::ProcessUploadQueue()
 			Chunk->UploadMesh(TerrainMaterial);
 		}
 	}
+}
+
+float AVoxelWorldActor::SampleSurfaceHeight(float WorldX, float WorldY) const
+{
+	if (TerrainSource == EVoxelTerrainSource::Heightmap && HeightmapProcessor && HeightmapProcessor->IsLoaded())
+	{
+		const float HalfW = HeightmapProcessor->GetImageWidth() * VOXEL_SIZE * 0.5;
+		const float HalfH = HeightmapProcessor->GetImageHeight() * VOXEL_SIZE * 0.5f;
+		return HeightmapProcessor->GetHeightAtWorld(WorldX, WorldY, -HalfW, -HalfH, VOXEL_SIZE);
+	}
+	const float SurfNoise = FBM(WorldX * NoiseFrequency, WorldY * NoiseFrequency, 0.f, NoiseSeed, 4, 1.f, 1.f, 2.f, 0.5f);
+	return SurfaceLevel + SurfNoise * NoiseAmplitude;
 }
 
 TSet<FChunkCoord> AVoxelWorldActor::ApplyDigSphere(FVector WorldCenter, float Radius, float Strength)

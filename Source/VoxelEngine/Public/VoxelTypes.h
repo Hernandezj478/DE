@@ -3,22 +3,12 @@
 #include "CoreMinimal.h"
 #include "VoxelTypes.generated.h"
 
-// How many cells in cube are formed between 8 neighboring density samples.
 static constexpr int32 CHUNK_SIZE = 32;
-// Sample per axis, needs one extra for seam row
 static constexpr int32 CHUNK_SAMPLE_SIZE = CHUNK_SIZE + 1;
-// Total density samples stored per chunk
 static constexpr int32 CHUNK_SAMPLE_COUNT = CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE * CHUNK_SAMPLE_SIZE;
 
-// Extended array adds one border voxel on each side of sample grid.
-static const int32 CHUNK_EXTENDED_SIZE = CHUNK_SAMPLE_SIZE + 2;
-
-// Physical size of one voxl cell in UU (cm)
-static constexpr float VOXEL_SIZE = 50.f;	// Change to 50u after proven concept
-// Physical size of one chunk in UU
+static constexpr float VOXEL_SIZE = 50.f;
 static constexpr float CHUNK_WORLD_SIZE = CHUNK_SIZE * VOXEL_SIZE;
-// Isosurface threshold. Density exactly at this value => on the surface.
-// Negative density => solid. Positive density => air
 static constexpr float ISO_LEVEL = 0.0f;
 
 

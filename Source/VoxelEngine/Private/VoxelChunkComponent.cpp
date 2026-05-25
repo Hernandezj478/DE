@@ -31,6 +31,16 @@ void UVoxelChunkComponent::ApplyGeneratedData(TArray<float>&& InDensities, TArra
 	VoxelTypes = MoveTemp(InVoxelTypes);
 }
 
+void UVoxelChunkComponent::ClearMesh()
+{
+	if (MeshComp)
+	{
+		MeshComp->ClearAllMeshSections();
+		MeshComp->SetCanEverAffectNavigation(false);
+	}
+	State = EChunkState::DensityReady;
+}
+
 void UVoxelChunkComponent::FillDensity(float Value)
 {
 	for (float& D : Densities)
@@ -48,8 +58,8 @@ void UVoxelChunkComponent::UploadMesh(UMaterialInterface* TerrainMaterial)
 			ChunkCoord.X, ChunkCoord.Y, ChunkCoord.Z));
 		AActor* Owner = GetOwner();
 		check(Owner);
-		MeshComp = NewObject<UProceduralMeshComponent>(Owner, CompName);
 
+		MeshComp = NewObject<UProceduralMeshComponent>(Owner, CompName);
 		MeshComp->SetNetAddressable();
 		MeshComp->SetCanEverAffectNavigation(false);
 		MeshComp->bUseAsyncCooking = false;
